@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Example XML file for Git repository testing -->
+<project>
+    <metadata>
+        <name>example-config</name>
+        <version>1.0.0</version>
+        <createdBy>orgutier</createdBy>
+        <environment>development</environment>
+    </metadata>
+
+    <settings>
+        <featureFlags>
+            <logging enabled="false"/>
+            <debugMode enabled="false"/>
+            <experimentalUI enabled="true"/>
+        </featureFlags>
+
+        <network>
+            <host>localhost</host>
+            <port>8080</port>
+            <timeout unit="seconds">30</timeout>
+        </network>
+    </settings>
+
+    <users>
+        <user id="001">
+            <username>admin</username>
+            <role>administrator</role>
+        </user>
+
+        <user id="002">
+            <username>developer</username>
+            <role>engineer</role>
+        </user>
+    </users>
+
+    <notes>
+        <note priority="low">
+            This file exists only as a generic XML example for Git operations.
+        </note>
+    </notes>
+</project>
