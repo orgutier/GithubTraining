@@ -10,14 +10,14 @@
 
     <settings>
         <featureFlags>
-            <logging enabled="false"/>
-            <debugMode enabled="false"/>
+            <logging enabled="true"/>
             <experimentalUI enabled="true"/>
+	    <debugMode enabled="false"/>
         </featureFlags>
 
         <network>
             <host>localhost</host>
-            <port>8080</port>
+            <port>800</port>
             <timeout unit="seconds">30</timeout>
         </network>
     </settings>
@@ -30,7 +30,7 @@
 
         <user id="002">
             <username>developer</username>
-            <role>engineer</role>
+            <role>dev</role>
         </user>
     </users>
 
