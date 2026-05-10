@@ -40,7 +40,7 @@ def main() -> None:
     Entry point for demonstration execution.
     """
     print("=" * 40)
-    print(greet_user("Developer"))
+    print(greet_user("Prod"))
     print(f"Version: {VERSION}")
     print(f"Timestamp: {get_timestamp()}")
     print(f"2 + 3 = {calculate_sum(2, 3)}")
