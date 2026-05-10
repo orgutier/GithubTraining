@@ -30,7 +30,7 @@
 
         <user id="002">
             <username>developer</username>
-            <role>dev</role>
+            <role>test</role>
         </user>
     </users>
 
