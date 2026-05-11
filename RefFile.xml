@@ -17,7 +17,7 @@
 
         <network>
             <host>localhost</host>
-            <port>800</port>
+            <port>8080</port>
             <timeout unit="seconds">30</timeout>
         </network>
     </settings>

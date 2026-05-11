@@ -39,12 +39,13 @@ def main() -> None:
     """
     Entry point for demonstration execution.
     """
-    print("=" * 40)
+    lines = 40
+    print("=" * lines)
     print(greet_user("Prod"))
     print(f"Version: {VERSION}")
     print(f"Timestamp: {get_timestamp()}")
     print(f"2 + 3 = {calculate_sum(2, 3)}")
-    print("=" * 40)
+    print("=" * lines)
 
 
 if __name__ == "__main__":
