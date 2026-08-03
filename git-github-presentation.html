@@ -981,6 +981,18 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 6b — RESTORE -->
+    <section class="slide" data-section="workspace → commit">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">Core loop</span>
+          <h1 class="title"><code style="font-size:.85em;">git restore</code> — undo one file, precisely</h1>
+          <h2 class="subtitle">Two different undos, one command: unstage a file without touching its edits, or discard the edits entirely. Neither ever moves HEAD or a branch — that's what makes it safer than <code>reset</code>.</h2>
+        </div>
+        <div class="scene" data-scene="restore-basics" data-layout="areas-basic" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 7 — BRANCHING -->
     <section class="slide" data-section="branching">
       <div class="slide-inner">
@@ -2849,6 +2861,25 @@ S['workspace-to-commit'] = { frames: [
              {type:'cmd', text:'git log --oneline'}, {type:'out', text:'9f0c21a (HEAD -> main) fix: paginate with offset\na1a001 init'} ] },
 ]};
 
+/* ---------------------------------------------------------- restore-basics */
+S['restore-basics'] = { frames: [
+  { cap: "Two files are in progress — <code>app.py</code> is ready to commit, <code>scratch.py</code> is just an experiment.",
+    areas: { workspace:[{id:'app.py',status:'modified'},{id:'scratch.py',status:'modified'}], staging:[] },
+    term: [] },
+  { cap: "<code>git add</code> stages both — but <code>scratch.py</code> wasn't meant to be included.",
+    areas: { workspace:[], staging:[{id:'app.py',status:'modified'},{id:'scratch.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git add app.py scratch.py'} ] },
+  { cap: "Caught it before committing: <code>git restore --staged</code> unstages <code>scratch.py</code> — back to the workspace, its edits completely untouched.",
+    areas: { workspace:[{id:'scratch.py',status:'modified'}], staging:[{id:'app.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git restore --staged scratch.py'}, {type:'out', text:'On branch main\nChanges to be committed:\n  <span class="o-green">modified:</span>   app.py\nChanges not staged for commit:\n  <span class="o-amber">modified:</span>   scratch.py'} ] },
+  { cap: "Actually, <code>scratch.py</code>'s edits aren't worth keeping at all. <code>git restore</code> with <b>no flag</b> discards a working-directory change outright — reverts the file to match the last commit. Unlike <code>--staged</code>, this one is destructive.",
+    areas: { workspace:[] },
+    term: [ {type:'cmd', text:'git restore scratch.py'}, {type:'out', text:'# scratch.py reverted to match HEAD — the edit is gone for good'} ] },
+  { cap: "<code>app.py</code> — the one you actually meant to commit — was never touched by any of this. Commit it.",
+    areas: { staging:[] },
+    term: [ {type:'cmd', text:'git commit -m "app: fix pagination"'}, {type:'out', text:'[main 9f0c21a] app: fix pagination\n 1 file changed, 1 insertion(+), 1 deletion(-)'} ] },
+]};
+
 /* ------------------------------------------------------------- branching */
 S['branching'] = { frames: [
   { cap: "Three commits on <b>main</b>.",
@@ -2908,23 +2939,29 @@ S['stash-flow'] = { frames: [
   { cap: "Before returning to the shelved feature, a small unrelated tweak comes up on <code>main</code> too.",
     areas: { workspace:[{id:'config.yml',status:'modified'}] },
     term: [ {type:'cmd', text:'vim config.yml'} ] },
-  { cap: "Stash it under its <b>own</b> label rather than mixing it with the first. Indices are <b>LIFO</b> — the newest is always <code>@{0}</code> — so the search-feature stash you pushed first just shifted from <code>@{0}</code> to <code>@{1}</code>.",
+  { cap: "Stash it separately rather than mixing it with the first — now two shelves exist. Indices are <b>LIFO</b>: the newest is always <code>@{0}</code>, so the search-feature stash you pushed first just shifted from <code>@{0}</code> to <code>@{1}</code>.",
     areas: { workspace:[], stash:['stash@{0}: On main: config tweak','stash@{1}: On main: search feature wip'] },
     term: [ {type:'cmd', text:'git stash push -m "config tweak"'}, {type:'out', text:'Saved working directory and index state On main: config tweak'} ] },
-  { cap: "Ready to resume the <i>search feature</i> specifically: <code>git stash list</code> confirms it's now at <code>@{1}</code> — <code>git stash apply stash@{1}</code> restores <b>that one</b>, by name, not by guessing position.",
+  { cap: "The config tweak turns out to be quick — pop it right back out (it's on top, no index needed) and commit it before returning to the shelved feature.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m9d003',parents:['a1a001'],lane:0,order:2,color:'blue',label:'tweak config'}],
+             branches:[{name:'main',commitId:'m9d003',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'red'}] },
+    areas: { workspace:[], stash:['stash@{0}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash pop'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   config.yml\nDropped stash@{0}'}, {type:'cmd', text:'git commit -am "tweak config"'}, {type:'out', text:'[main m9d003] tweak config'} ] },
+  { cap: "Popping the top entry reindexes the rest automatically — the search-feature stash is back to being the only one, so it's <code>@{0}</code> again. <code>git stash list</code> confirms it before touching anything.",
+    term: [ {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: On main: search feature wip'} ] },
+  { cap: "<code>git stash apply stash@{0}</code> restores it, by name, matching what the list just showed — <code>apply</code> (unlike <code>pop</code>) leaves it on the stack too, in case it's needed on another branch.",
     areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}] },
-    term: [ {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: On main: config tweak\nstash@{1}: On main: search feature wip'},
-             {type:'cmd', text:'git stash apply stash@{1}'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py'} ] },
-  { cap: "Unlike <code>pop</code>, <code>apply</code> leaves the entry on the stack. Once the restored work is confirmed, <code>git stash drop stash@{1}</code> removes just that one — the config-tweak shelf (still <code>@{0}</code>) is untouched.",
-    areas: { stash:['stash@{0}: On main: config tweak'] },
-    term: [ {type:'cmd', text:'git stash drop stash@{1}'}, {type:'out', text:'Dropped stash@{1} (c9a2b1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0)'} ] },
+    term: [ {type:'cmd', text:'git stash apply stash@{0}'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py'} ] },
+  { cap: "Once the restored work is confirmed, <code>git stash drop stash@{0}</code> removes it for good — the stack is empty again.",
+    areas: { stash:[] },
+    term: [ {type:'cmd', text:'git stash drop stash@{0}'}, {type:'out', text:'Dropped stash@{0} (c9a2b1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0)'} ] },
 ]};
 
 /* ---------------------------------------------------------- fast-forward */
 S['ff-merge'] = { frames: [
-  { cap: "<code>main</code> and <code>feature/ui</code> start at the same commit.",
-    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'a1a001',color:'green',stack:1}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'cmd', text:'git switch -c feature/ui'} ] },
+  { cap: "<code>main</code> and <code>feature/ui</code> start at the same commit. <code>git switch -c</code> creates the branch <b>and</b> moves HEAD there immediately, in one step.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'a1a001',color:'green',stack:1}], head:{type:'branch',ref:'feature/ui'} },
+    term: [ {type:'cmd', text:'git switch -c feature/ui'}, {type:'out', text:"Switched to a new branch 'feature/ui'"} ] },
   { cap: "A commit lands on <code>feature/ui</code>. <code>main</code> hasn't moved.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'restyle nav'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'b2c002',color:'green'}], head:{type:'branch',ref:'feature/ui'} },
@@ -3256,7 +3293,7 @@ S['diverge-check'] = { frames: [
   { cap: "Confirmed fast-forward — a plain <code>git pull</code> (no <code>--rebase</code>, nothing of yours to replay) just slides the pointer.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'}],
              branches:[{name:'main',commitId:'c3c003',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
-    term: [ {type:'cmd', text:'git pull'}, {type:'out', text:'Updating b2b002..c3c003\nFast-forward\n 1 file changed'} ] },
+    term: [ {type:'cmd', text:'git pull origin main'}, {type:'out', text:'Updating b2b002..c3c003\nFast-forward\n 1 file changed'} ] },
   { cap: "Now the other case: you make a local commit of your own, <i>before</i> checking in again.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'}],
              branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
@@ -3343,14 +3380,11 @@ S['process-squash'] = { frames: [
   { cap: "Only the <i>last</i> line changes to <code class=\"c-kw\" style=\"color:var(--amber)\">squash</code> — it's a tiny fixup of the commit right above it. The teammate's commit stays <code class=\"c-kw\" style=\"color:var(--blue)\">pick</code>, untouched: it isn't yours to rewrite.",
     conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw" style="color:var(--amber)">squash</span> p7b007 fix: off-by-one at tier boundary\n\n<span class="c-com"># squash → meld into the commit above, combining both messages</span>',
     term: [ {type:'cmd', text:'git rebase -i main'}, {type:'out', text:'# editing the todo list…'} ] },
-  { cap: "Reapplying the squash touches the same lines your teammate's tests cover, so it <b>conflicts</b>.",
-    conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">assert price(order) == order.subtotal * 0.95</span>\n<span class="sep">=======</span>\n<span class="theirs">assert price(order) == order.subtotal - discount(order)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; fix: off-by-one at tier boundary</span>',
-    term: [ {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in tests/test_pricing.py</span>\nerror: could not apply p7b007… fix: off-by-one at tier boundary'} ] },
-  { cap: "Resolve by keeping the more general assertion, then <code>git add</code> and <code>--continue</code>. The two commits become one — combined message, single new hash.",
+  { cap: "Save and quit — no new conflict here: both commits already replay cleanly in sequence (that's exactly what the earlier rebase just proved), so folding them needs no resolution. Git just melds the diffs and combines the messages.",
     local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'t9c113',parents:['m1a001'],lane:1,order:1,color:'violet',label:"teammate: edge-case tests"},{id:'f4d224',parents:['t9c113'],lane:1,order:2,color:'green',label:'pricing: add volume-discount tier'}],
              branches:[{name:'main',commitId:'m1a001',color:'blue'},{name:'feature/pricing',commitId:'f4d224',color:'green'}] },
-    conflict: 'assert price(order) == order.subtotal - discount(order)  <span class="c-com"># resolved: covers both cases</span>',
-    term: [ {type:'cmd', text:'git add tests/test_pricing.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
+    conflict: '<span class="c-com"># git log -1</span>\n<span style="color:var(--green)">f4d224</span> pricing: add volume-discount tier',
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
   { cap: "History was rewritten locally, so a plain push would be rejected again. <code>--force-with-lease</code> force-pushes only if the remote still matches what you last fetched — safe against clobbering anyone else's new work.",
     term: [ {type:'cmd', text:'git push --force-with-lease origin feature/pricing'}, {type:'out', text:'+ p7b007...f4d224 feature/pricing -> feature/pricing (forced update)'} ] },
 ]};
@@ -3380,12 +3414,21 @@ S['process-rebase'] = { frames: [
       branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'r5e005',color:'green'}], head:{type:'branch',ref:'feature/api'} },
     conflict: '<span class="c-com"># nothing lost — rebase --abort is a full undo, not a partial one</span>',
     term: [ {type:'cmd', text:'git rebase --abort'}, {type:'out', text:'HEAD is now at r5e005 add pagination'} ] },
-  { cap: "Retrying with a clearer head: same conflict, but this time resolve it deliberately — keep the higher, safer limit — <code>git add</code>, <code>--continue</code>.",
+  { cap: "Retrying with a clearer head: <code>git rebase main</code> again. First commit replays the same as before; the second hits the <b>identical</b> conflict — nothing about the code changed, only the state of mind.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
+      {id:'r4d004',parents:['a1a001'],lane:1,order:1,color:'green',label:'add /v2/users route',ghost:true},{id:'r5e005',parents:['r4d004'],lane:1,order:2,color:'green',label:'add pagination',ghost:true},
+      {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'}],
+      branches:[{name:'main',commitId:'m3c003',color:'blue'}] },
+    conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">MAX_PAGE_SIZE = 100  # rate-limit tuning</span>\n<span class="sep">=======</span>\n<span class="theirs">MAX_PAGE_SIZE = 50   # pagination default</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; add pagination</span>',
+    term: [ {type:'cmd', text:'git rebase main'}, {type:'out', text:'Applying: add /v2/users route'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in config.py</span>\nerror: could not apply r5e005… add pagination'} ] },
+  { cap: "This time, resolve it deliberately instead of reacting under pressure — keep the higher, safer limit. That edit is the actual fix; everything before it was just getting back to this point.",
+    conflict: 'MAX_PAGE_SIZE = 100  <span class="c-com"># resolved: rate-limit value wins, still covers pagination\'s needs</span>',
+    term: [ {type:'out', text:'# editing config.py…'} ] },
+  { cap: "<code>git add</code> marks it resolved, <code>--continue</code> resumes replaying — the rebase finishes.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'}],
       branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'n7a007',color:'green'}] },
-    conflict: 'MAX_PAGE_SIZE = 100  <span class="c-com"># resolved: rate-limit value wins, still covers pagination\'s needs</span>',
-    term: [ {type:'cmd', text:'git rebase main'}, {type:'out', text:'Applying: add /v2/users route'}, {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/api.'} ] },
+    term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/api.'} ] },
   { cap: "Meanwhile an urgent security patch lands on <code>hotfix/security</code> — needed on <code>feature/api</code> right away, without waiting for the rest of that branch to finish.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'},
@@ -3396,16 +3439,22 @@ S['process-rebase'] = { frames: [
   { cap: "It <b>conflicts</b> — feature/api's new route touches the same input-handling block.",
     conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">def get_users(req): return db.query(sanitize(req.params))</span>\n<span class="sep">=======</span>\n<span class="theirs">def handle(req): return escape_input(req.body)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; security: escape user input</span>',
     term: [ {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in routes.py</span>'} ] },
-  { cap: "Bad timing — mid-review, not the moment to untangle this. <code>cherry-pick --abort</code> undoes the in-progress pick. A stray edit from poking at the conflict is still sitting in the working tree, so <code>reset --hard</code> wipes the workspace fully back to the last commit.",
+  { cap: "Bad timing — mid-review, not the moment to untangle this. <code>cherry-pick --abort</code> undoes the in-progress pick. A stray edit from poking at the conflict is still sitting in the working tree, so <code>reset --hard</code> wipes the workspace fully back to the last commit. <code>hotfix/security</code> and its commit are untouched by any of this — cherry-pick only ever copies, it never moves the source.",
     conflict: '<span class="c-com"># reset --hard is destructive: uncommitted changes are gone for good.</span>\n<span class="c-com"># cherry-pick --abort alone would have been enough here — reset --hard is one step further.</span>',
     term: [ {type:'cmd', text:'git cherry-pick --abort'}, {type:'cmd', text:'git reset --hard HEAD'}, {type:'out', text:'HEAD is now at n7a007 add pagination'} ] },
-  { cap: "Once <code>feature/api</code>'s own routing work is merged, the security fix cherry-picks cleanly onto the settled code.",
+  { cap: "Retrying with a clearer head: <code>git cherry-pick h8b008</code> again — same commit, same target, so the <b>exact same conflict</b> comes back. Nothing about the code changed; only the abandoned attempt is gone.",
+    conflict: '<span class="marker-ours">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">def get_users(req): return db.query(sanitize(req.params))</span>\n<span class="sep">=======</span>\n<span class="theirs">def handle(req): return escape_input(req.body)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; security: escape user input</span>',
+    term: [ {type:'cmd', text:'git cherry-pick h8b008'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in routes.py</span>'} ] },
+  { cap: "This time, resolve it properly instead of walking away — keep both fixes, combined into one function.",
+    conflict: 'def get_users(req): return db.query(sanitize(escape_input(req.params)))  <span class="c-com"># both fixes, together</span>',
+    term: [ {type:'out', text:'# editing routes.py…'} ] },
+  { cap: "<code>git add</code> then <code>--continue</code> finishes the pick as a brand-new commit — while <code>h8b008</code> itself stays exactly where it was, still on <code>hotfix/security</code>, unmodified.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'},
+      {id:'h8b008',parents:['m3c003'],lane:2,order:3,color:'red',label:'security: escape user input'},
       {id:'h9c009',parents:['n7a007'],lane:1,order:5,color:'red',label:'security: escape user input'}],
-      branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'h9c009',color:'green'}] },
-    conflict: 'def get_users(req): return db.query(sanitize(escape_input(req.params)))  <span class="c-com"># both fixes, together</span>',
-    term: [ {type:'cmd', text:'git cherry-pick h8b008'}, {type:'out', text:'[feature/api h9c009] security: escape user input'} ] },
+      branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'h9c009',color:'green'},{name:'hotfix/security',commitId:'h8b008',color:'red',stack:1}] },
+    term: [ {type:'cmd', text:'git add routes.py'}, {type:'cmd', text:'git cherry-pick --continue'}, {type:'out', text:'[feature/api h9c009] security: escape user input'} ] },
 ]};
 
 /* ================================================================
