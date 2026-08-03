@@ -269,6 +269,14 @@ pre.code-block .c-conflict, .conflict-block .c-conflict{ color:var(--amber); }
 .anatomy-detail b{ color:var(--text); font-family:var(--font-mono); }
 
 /* ======================================================================
+   SCENE (interactive diagram + terminal, laid out side by side)
+   ====================================================================== */
+.scene{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.scene-row{ min-width:0; min-height:0; }
+.scene-top{ min-width:0; }
+.scene-code{ min-width:0; }
+
+/* ======================================================================
    TERMINAL
    ====================================================================== */
 .terminal{
@@ -371,9 +379,9 @@ pre.code-block .c-conflict, .conflict-block .c-conflict{ color:var(--amber); }
   padding:10px; position:relative; min-height:0; height:100%;
   display:flex; flex-direction:column; gap:6px;
 }
-.graph-wrap .panel-title{ margin-bottom:0; flex:none; }
-.graph-titlebar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; }
-.graph-toolbar{ display:flex; align-items:center; gap:4px; }
+.graph-wrap .panel-title{ margin-bottom:0; flex:1 1 auto; min-width:0; }
+.graph-titlebar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; flex-wrap:wrap; row-gap:6px; }
+.graph-toolbar{ display:flex; align-items:center; gap:4px; flex:none; }
 .graph-tbtn{
   width:24px; height:24px; display:flex; align-items:center; justify-content:center;
   background:var(--panel-2); border:1px solid var(--border-lt); border-radius:5px;
@@ -1632,9 +1640,14 @@ function sceneTemplate(layout, ds){
   else if(layout==='remote') top = `<div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
   else if(layout==='full') top = `<div class="areas with-stash">${areaBoxes.workspace}${areaBoxes.staging}${areaBoxes.stash}<div class="area local"><div class="area-head"><span class="sw"></span>Local (HEAD)</div><div class="area-body local-list"></div></div><div class="area remote"><div class="area-head"><span class="sw"></span>Remote</div><div class="area-body remote-list"></div></div></div>`;
 
+  // wider layouts (nested side-by-side panels, or 5-up areas) need more room for the chart side
+  const topFlex = (layout==='graph-conflict' || layout==='remote') ? 1.7 : (layout==='full' ? 1.5 : 1.15);
+
   return `<div class="scene-grid" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">
-    <div class="scene-top" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">${top}</div>
-    ${terminal}
+    <div class="scene-row" style="flex:1;min-height:0;display:flex;flex-direction:row;gap:16px;">
+      <div class="scene-top" style="flex:${topFlex};min-height:0;display:flex;flex-direction:column;gap:10px;">${top}</div>
+      <div class="scene-code" style="flex:1;min-height:0;display:flex;flex-direction:column;">${terminal}</div>
+    </div>
     ${stepbar}
   </div>`;
 }
