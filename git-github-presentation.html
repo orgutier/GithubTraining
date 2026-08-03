@@ -174,6 +174,12 @@ button{ font-family:inherit; cursor:pointer; }
   font-family:var(--font-mono); font-size:14px; color:var(--text-faint); margin-top:6px;
 }
 .title-path span{ color:var(--blue); }
+.title-byline{
+  font-family:var(--font-mono); font-size:13px; color:var(--text-faint); margin-top:16px;
+}
+.title-byline b{ color:var(--text-dim); font-weight:600; }
+.title-byline a{ color:var(--blue); text-decoration:none; border-bottom:1px solid var(--blue-dim); }
+.title-byline a:hover{ border-bottom-color:var(--blue); }
 
 /* ======================================================================
    LAYOUT HELPERS
@@ -562,64 +568,88 @@ table.cmp code{ font-size:.85em; }
 .cheat-card li b{ color:var(--text); font-weight:600; }
 
 /* ======================================================================
-   CHROME / NAV — collapsible sidebar, left edge, opens on mouse proximity
+   CHROME / NAV — a rail of progress dots pinned to the left edge; it
+   expands in place into a full sidebar (with slide/step names) on hover
    ====================================================================== */
 .navzone{
-  position:fixed; top:0; left:0; width:34px; height:100%; z-index:59;
+  position:fixed; top:0; left:0; width:40px; height:100%; z-index:59;
 }
 .chrome{
-  position:fixed; top:50%; left:14px; transform:translate(-115%,-50%);
-  display:flex; flex-direction:column; align-items:stretch; gap:12px;
+  position:fixed; top:50%; left:10px; transform:translateY(-50%);
+  display:flex; flex-direction:column; gap:10px;
   background:rgba(16,21,29,.95); backdrop-filter:blur(10px);
-  border:1px solid var(--border); border-radius:14px; padding:16px 14px;
+  border:1px solid var(--border); border-radius:14px;
+  padding:14px 8px;
+  width:34px; max-height:82vh; overflow:hidden;
   z-index:60; box-shadow:0 14px 34px rgba(0,0,0,.5);
-  width:206px; max-height:80vh;
-  opacity:0; pointer-events:none;
-  transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+  transition:width .32s cubic-bezier(.4,0,.2,1), padding .32s ease;
 }
-.chrome.open{ transform:translate(0,-50%); opacity:1; pointer-events:auto; }
-/* handle sliver — stays visible at the edge while collapsed, hints the sidebar exists */
-.chrome-handle{
-  position:fixed; top:50%; left:0; transform:translateY(-50%);
-  width:5px; height:64px; border-radius:0 6px 6px 0;
-  background:var(--border-lt); z-index:58;
-  transition:background .25s ease, height .25s ease, opacity .25s ease;
+.chrome.open{ width:290px; padding:16px 14px; }
+
+/* rows that only make sense once the sidebar is wide enough to read */
+.chrome-fade{
+  max-height:0; opacity:0; overflow:hidden; pointer-events:none;
+  transition:max-height .3s ease, opacity .18s ease;
 }
-.chrome-handle.active{ background:var(--blue); height:80px; }
+.chrome.open .chrome-fade{ max-height:200px; opacity:1; pointer-events:auto; }
 
 .chrome-brand{ display:flex; flex-direction:column; gap:4px; }
-.brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); }
+.brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; }
 .brand-dot{ color:var(--amber); }
 .section-tag{
   font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
-  border-top:1px solid var(--border-lt); padding-top:6px;
+  border-top:1px solid var(--border-lt); padding-top:6px; white-space:nowrap;
 }
-.chrome-count{ display:flex; align-items:center; gap:8px; }
+.chrome-count{ display:flex; align-items:center; gap:8px; white-space:nowrap; }
 .chrome-label{
   font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--text-faint); margin-bottom:2px;
+  text-transform:uppercase; color:var(--text-faint); margin-bottom:4px; white-space:nowrap;
 }
-.chrome-dots-wrap{
-  display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto;
-  padding:2px 4px 2px 2px;
+
+.chrome-dots-wrap{ display:flex; flex-direction:column; gap:3px; max-height:280px; overflow-y:auto; overflow-x:hidden; }
+.dot-row{
+  display:flex; align-items:center; gap:10px; padding:3px 2px; border-radius:6px;
+  cursor:pointer; transition:background .15s ease;
 }
+.dot-row:hover{ background:var(--panel-2); }
+.dot-row .dot-label{
+  font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:0; opacity:0;
+  transition:max-width .3s ease, opacity .2s ease;
+}
+.chrome.open .dot-row .dot-label{ max-width:200px; opacity:1; }
+.dot-row.current .dot-label{ color:var(--text); font-weight:600; }
 .stepdot{
   width:8px; height:8px; border-radius:50%; background:var(--border-lt); flex:none;
-  transition:all .2s ease; cursor:pointer;
+  transition:all .2s ease;
 }
-.stepdot:hover{ filter:brightness(1.6); transform:scale(1.15); }
+.dot-row:hover .stepdot{ filter:brightness(1.6); transform:scale(1.15); }
 .stepdot.done{ background:var(--blue); }
 .stepdot.current{ background:var(--amber); height:20px; border-radius:4px; }
-.chrome-subdots-wrap{ display:flex; flex-wrap:wrap; gap:5px; padding-top:4px; border-top:1px solid var(--border-lt); }
+
+.chrome-subdots-wrap{
+  display:flex; flex-direction:column; gap:3px; padding-top:8px; margin-top:2px;
+  border-top:1px solid var(--border-lt); max-height:170px; overflow-y:auto; overflow-x:hidden;
+}
+.subdot-row{ display:flex; align-items:center; gap:10px; padding:2px; border-radius:6px; cursor:pointer; transition:background .15s ease; }
+.subdot-row:hover{ background:var(--panel-2); }
+.subdot-row .subdot-label{
+  font-family:var(--font-sans); font-size:11px; color:var(--text-dim); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:0; opacity:0;
+  transition:max-width .3s ease, opacity .2s ease;
+}
+.chrome.open .subdot-row .subdot-label{ max-width:180px; opacity:1; }
+.subdot-row.current .subdot-label{ color:var(--text); }
 .subdot{
   width:6px; height:6px; border-radius:50%; background:var(--border-lt); flex:none;
-  transition:all .2s ease; cursor:pointer;
+  transition:all .2s ease;
 }
-.subdot:hover{ filter:brightness(1.6); transform:scale(1.2); }
+.subdot-row:hover .subdot{ filter:brightness(1.6); transform:scale(1.2); }
 .subdot.done{ background:var(--blue); }
 .subdot.current{ background:var(--amber); width:14px; border-radius:3px; }
+
 .chrome-actions{ display:flex; align-items:center; gap:8px; }
-.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); }
+.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); white-space:nowrap; }
 .slide-count.sub-count{
   color:var(--amber); background:rgba(227,179,65,.1); border:1px solid rgba(227,179,65,.35);
   border-radius:6px; padding:3px 8px; margin:0;
@@ -627,7 +657,7 @@ table.cmp code{ font-size:.85em; }
 .chip-btn, .nav-btn{
   background:var(--panel-2); border:1px solid var(--border-lt); color:var(--text-dim);
   width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
-  font-size:14px; transition:all .2s ease;
+  font-size:14px; transition:all .2s ease; flex:none;
 }
 .chip-btn:hover, .nav-btn:hover{ color:var(--text); border-color:var(--blue); }
 .nav-btn{ font-size:18px; }
@@ -796,6 +826,7 @@ table.cmp code{ font-size:.85em; }
         <div class="title-wordmark">git<span class="dot">·</span>log</div>
         <p class="title-sub">A hands-on tour of Git &amp; GitHub — from a single keystroke in your editor to a merged pull request. Every command shown next to the workspace, staging area, stash, commit graph and remote it actually touches.</p>
         <div class="title-path">$ <span>cd</span> ~/from-a-single-edit-to-github</div>
+        <div class="title-byline">By <b>@orgutier</b> &amp; Claude — <a href="https://github.com/orgutier/GithubTraining" target="_blank" rel="noopener">github.com/orgutier/GithubTraining</a></div>
         <div class="title-meta">
           <span><b>→</b> / Space — advance</span>
           <span><b>R</b> — replay animation</span>
@@ -1396,32 +1427,32 @@ table.cmp code{ font-size:.85em; }
     <!-- SLIDES-MARKER -->
   </main>
 
-  <!-- Chrome / controls — hover-activated sidebar on the left edge -->
+  <!-- Chrome / controls — a rail of progress dots always visible on the left edge;
+       expands in place into a full sidebar with slide/step names on hover -->
   <div class="navzone" id="navZone"></div>
-  <div class="chrome-handle" id="chromeHandle"></div>
   <nav class="chrome" id="chromeNav">
-    <div class="chrome-brand">
+    <div class="chrome-brand chrome-fade">
       <span class="brand">git<span class="brand-dot">·</span>log</span>
       <span class="section-tag" id="sectionTag">intro</span>
     </div>
 
-    <div class="chrome-count">
+    <div class="chrome-count chrome-fade">
       <span class="slide-count"><span id="slideNum">1</span> / <span id="slideTotal">1</span></span>
       <span class="slide-count sub-count" id="subCount" style="display:none;"></span>
     </div>
 
     <div>
-      <div class="chrome-label">Slides</div>
+      <div class="chrome-label chrome-fade">Slides</div>
       <div class="chrome-dots-wrap scroll-y" id="stepDots"></div>
     </div>
 
     <div class="chrome-subdots-wrap" id="subDots" style="display:none;"></div>
 
-    <div class="chrome-actions">
-      <button class="nav-btn" id="prevBtn" aria-label="Previous slide" title="Previous (←)">‹</button>
-      <button class="nav-btn" id="nextBtn" aria-label="Next slide" title="Next (→ / Space)">›</button>
+    <div class="chrome-actions chrome-fade">
+      <button class="nav-btn" id="prevBtn" aria-label="Previous step or slide" title="Previous (←)">‹</button>
+      <button class="nav-btn" id="nextBtn" aria-label="Next step or slide" title="Next (→ / Space)">›</button>
     </div>
-    <div class="chrome-actions">
+    <div class="chrome-actions chrome-fade">
       <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
       <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
     </div>
@@ -1488,9 +1519,18 @@ const Deck = {
 
   buildStepDots(){
     const wrap = document.getElementById('stepDots');
-    wrap.innerHTML = this.slides.map((_,i)=>`<span class="stepdot" data-i="${i}" title="${i+1}. ${this.slides[i].dataset.section||''}"></span>`).join('');
-    wrap.querySelectorAll('.stepdot').forEach(dot=>{
-      dot.addEventListener('click', ()=>this.goTo(parseInt(dot.dataset.i,10)));
+    wrap.innerHTML = '';
+    this.slides.forEach((slideEl,i)=>{
+      const name = slideDisplayName(slideEl, i);
+      const row = document.createElement('div');
+      row.className = 'dot-row';
+      row.dataset.i = i;
+      row.title = `${i+1}. ${name}`;
+      const dot = document.createElement('span'); dot.className = 'stepdot';
+      const label = document.createElement('span'); label.className = 'dot-label'; label.textContent = name;
+      row.appendChild(dot); row.appendChild(label);
+      row.addEventListener('click', ()=>this.goTo(i));
+      wrap.appendChild(row);
     });
   },
 
@@ -1498,10 +1538,13 @@ const Deck = {
     document.getElementById('slideNum').textContent = this.idx+1;
     document.getElementById('progressFill').style.width = ((this.idx+1)/this.slides.length*100)+'%';
     document.getElementById('sectionTag').textContent = this.slides[this.idx].dataset.section || '';
-    const dots = document.querySelectorAll('.stepdot');
-    dots.forEach((d,i)=>{
-      d.classList.toggle('done', i < this.idx);
-      d.classList.toggle('current', i === this.idx);
+    document.querySelectorAll('#stepDots .dot-row').forEach((row,i)=>{
+      const done = i < this.idx, current = i === this.idx;
+      row.classList.toggle('current', current);
+      const dot = row.querySelector('.stepdot');
+      dot.classList.toggle('done', done);
+      dot.classList.toggle('current', current);
+      if(current) row.scrollIntoView({block:'nearest'});
     });
     this.updateSubCounter();
   },
@@ -1525,18 +1568,31 @@ const Deck = {
           const key = sceneEl.dataset.scene;
           if(subDots.dataset.for !== key){
             subDots.dataset.for = key;
-            subDots.innerHTML = scene.frames.map((_,i)=>`<span class="subdot" data-i="${i}" title="Step ${i+1}"></span>`).join('');
-            subDots.querySelectorAll('.subdot').forEach(dot=>{
-              dot.addEventListener('click', (e)=>{
+            subDots.innerHTML = '';
+            scene.frames.forEach((f,i)=>{
+              const name = frameCaptionText(f.cap) || `Step ${i+1}`;
+              const row = document.createElement('div');
+              row.className = 'subdot-row';
+              row.dataset.i = i;
+              row.title = `Step ${i+1}: ${name}`;
+              const dot = document.createElement('span'); dot.className = 'subdot';
+              const label = document.createElement('span'); label.className = 'subdot-label'; label.textContent = name;
+              row.appendChild(dot); row.appendChild(label);
+              row.addEventListener('click', (e)=>{
                 e.stopPropagation();
-                scene.goToFrame(parseInt(dot.dataset.i,10));
+                scene.goToFrame(i);
                 this.updateSubCounter();
               });
+              subDots.appendChild(row);
             });
           }
-          subDots.querySelectorAll('.subdot').forEach((d,i)=>{
-            d.classList.toggle('done', i < scene.idx);
-            d.classList.toggle('current', i === scene.idx);
+          subDots.querySelectorAll('.subdot-row').forEach((row,i)=>{
+            const done = i < scene.idx, current = i === scene.idx;
+            row.classList.toggle('current', current);
+            const dot = row.querySelector('.subdot');
+            dot.classList.toggle('done', done);
+            dot.classList.toggle('current', current);
+            if(current) row.scrollIntoView({block:'nearest'});
           });
           subDots.style.display = 'flex';
         }
@@ -1579,7 +1635,24 @@ const Deck = {
     }
     if(this.idx < this.slides.length-1) this.goTo(this.idx+1);
   },
-  prev(){ if(this.idx>0) this.goTo(this.idx-1); },
+
+  prev(){
+    // if current slide has a scene mid-way through its steps, step it back first
+    const s = this.slides[this.idx];
+    const sceneEl = s.querySelector('[data-scene]');
+    if(sceneEl){
+      const scene = Deck.scenes.get(sceneEl);
+      if(scene && scene.idx > 0){ scene.goToFrame(scene.idx-1); return; }
+    }
+    if(this.idx <= 0) return;
+    this.goTo(this.idx-1);
+    // land on the previous slide's last step, mirroring how next() always starts a slide at step 1
+    const prevSceneEl = this.slides[this.idx].querySelector('[data-scene]');
+    if(prevSceneEl){
+      const prevScene = this.scenes.get(prevSceneEl);
+      if(prevScene && prevScene.frames.length) prevScene.goToFrame(prevScene.frames.length-1);
+    }
+  },
 
   activateScenesIn(slideEl){
     const wrappers = slideEl.querySelectorAll('[data-scene]');
@@ -1663,24 +1736,20 @@ function showHelp(show){
   document.getElementById('helpOverlay').classList.toggle('show', show);
 }
 
-/* sidebar nav: minimized against the left edge, opens when the mouse is near it or over it */
+/* sidebar nav: a dot rail stays visible against the left edge; it widens in
+   place — revealing slide/step names — when the mouse is near it or over it */
 function setupChromeHover(){
   const zone = document.getElementById('navZone');
   const chrome = document.getElementById('chromeNav');
-  const handle = document.getElementById('chromeHandle');
   if(!zone || !chrome) return;
   let closeTimer = null;
   function open(){
     clearTimeout(closeTimer);
     chrome.classList.add('open');
-    if(handle) handle.classList.add('active');
   }
   function scheduleClose(){
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(()=>{
-      chrome.classList.remove('open');
-      if(handle) handle.classList.remove('active');
-    }, 260);
+    closeTimer = setTimeout(()=>chrome.classList.remove('open'), 260);
   }
   zone.addEventListener('mouseenter', open);
   zone.addEventListener('mouseleave', scheduleClose);
@@ -1689,6 +1758,24 @@ function setupChromeHover(){
   // brief peek on load so the sidebar's presence is discoverable
   open();
   closeTimer = setTimeout(scheduleClose, 1800);
+}
+
+/* human-readable name for a slide: its heading text, falling back to the
+   title slide's wordmark, then its section tag */
+function slideDisplayName(slideEl, i){
+  const h1 = slideEl.querySelector('h1.title');
+  if(h1) return h1.textContent.trim().replace(/\s+/g,' ');
+  const wordmark = slideEl.querySelector('.title-wordmark');
+  if(wordmark) return wordmark.textContent.trim().replace(/\s+/g,' ');
+  return slideEl.dataset.section || ('Slide ' + (i+1));
+}
+
+/* plain-text version of a scene frame's (HTML) caption, for a subslide label */
+function frameCaptionText(cap){
+  if(!cap) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = cap;
+  return tmp.textContent.trim().replace(/\s+/g,' ');
 }
 
 /* ============================= SCENE TEMPLATE BUILDER ============================= */
