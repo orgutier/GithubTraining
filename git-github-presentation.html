@@ -1001,7 +1001,7 @@ table.cmp code{ font-size:.85em; }
           <h1 class="title">Stash — a shelf beside the workspace</h1>
           <h2 class="subtitle">Need to switch branches with unfinished changes? <code>git stash</code> tucks your edits onto a stack without a commit. <code>git stash pop</code> brings them back.</h2>
         </div>
-        <div class="scene" data-scene="stash-flow" data-layout="areas-stash" data-term="~/app"></div>
+        <div class="scene" data-scene="stash-flow" data-layout="areas-stash-remote" data-term="~/app"></div>
       </div>
     </section>
 
@@ -1873,13 +1873,14 @@ function sceneTemplate(layout, ds){
   if(layout==='areas-basic') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.staging}</div>`;
   else if(layout==='areas-commit') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.staging}</div>${localGraphSmall}`;
   else if(layout==='areas-stash') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.stash}</div>`;
+  else if(layout==='areas-stash-remote') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.stash}</div><div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
   else if(layout==='graph') top = localGraph;
   else if(layout==='graph-conflict') top = `<div class="cols c2-wide" style="flex:1;min-height:0;">${localGraph}${conflictBox}</div>`;
   else if(layout==='remote') top = `<div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
   else if(layout==='full') top = `<div class="areas with-stash">${areaBoxes.workspace}${areaBoxes.staging}${areaBoxes.stash}<div class="area local"><div class="area-head"><span class="sw"></span>Local (HEAD)</div><div class="area-body local-list"></div></div><div class="area remote"><div class="area-head"><span class="sw"></span>Remote</div><div class="area-body remote-list"></div></div></div>`;
 
   // wider layouts (nested side-by-side panels, or 5-up areas) need more room for the chart side
-  const topFlex = (layout==='graph-conflict' || layout==='remote') ? 1.7 : (layout==='full' ? 1.5 : 1.15);
+  const topFlex = (layout==='graph-conflict' || layout==='remote' || layout==='areas-stash-remote') ? 1.7 : (layout==='full' ? 1.5 : 1.15);
 
   return `<div class="scene-grid" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">
     <div class="scene-row" style="flex:1;min-height:0;display:flex;flex-direction:row;gap:16px;">
@@ -2881,28 +2882,40 @@ S['branching'] = { frames: [
 /* --------------------------------------------------------------- stash */
 S['stash-flow'] = { frames: [
   { cap: "You're mid-edit on two files on <code>main</code>, and an urgent bug on another branch needs attention right now.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'violet'}] },
     areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}], stash:[] },
     term: [] },
   { cap: "<code>git stash push -m \"…\"</code> shelves both changes under a label, and returns the workspace to a clean, HEAD-matching state.",
     areas: { workspace:[], stash:['stash@{0}: On main: search feature wip'] },
     term: [ {type:'cmd', text:'git stash push -m "search feature wip"'}, {type:'out', text:'Saved working directory and index state On main: search feature wip'} ] },
-  { cap: "Workspace is clean, so it's safe to switch — Git would refuse the switch if uncommitted changes conflicted with the target branch.",
-    term: [ {type:'cmd', text:'git switch hotfix/urgent-payment-bug'}, {type:'out', text:"Switched to branch 'hotfix/urgent-payment-bug'"} ] },
-  { cap: "Fix the bug and commit it directly on <code>hotfix/urgent-payment-bug</code> — completely unrelated to the shelved work.",
-    term: [ {type:'cmd', text:'git commit -am "fix: payment race condition"'}, {type:'out', text:'[hotfix/urgent-payment-bug 8f21ac0] fix: payment race condition\n 1 file changed, 3 insertions(+), 1 deletion(-)'} ] },
-  { cap: "Push the fix, then switch back to <code>main</code> — the stash isn't tied to any branch, so it's still sitting there waiting.",
-    term: [ {type:'cmd', text:'git push origin hotfix/urgent-payment-bug'}, {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
+  { cap: "Workspace is clean, so it's safe to switch — Git would refuse the switch if uncommitted changes conflicted with the target branch. <code>git switch -c</code> creates the hotfix branch and moves there in one step.",
+    local: { branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'a1a001',color:'red',stack:1}], head:{type:'branch',ref:'hotfix/urgent-payment-bug'} },
+    term: [ {type:'cmd', text:'git switch -c hotfix/urgent-payment-bug'}, {type:'out', text:"Switched to a new branch 'hotfix/urgent-payment-bug'"} ] },
+  { cap: "Track down and fix the race condition in <code>payment.py</code> — this is the actual bug work, still uncommitted.",
+    areas: { workspace:[{id:'payment.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'vim payment.py'} ] },
+  { cap: "Commit it directly on <code>hotfix/urgent-payment-bug</code> — completely unrelated to the shelved work.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'h1a002',parents:['a1a001'],lane:1,order:1,color:'red',label:'fix: payment race condition'}],
+             branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'red'}] },
+    areas: { workspace:[] },
+    term: [ {type:'cmd', text:'git commit -am "fix: payment race condition"'}, {type:'out', text:'[hotfix/urgent-payment-bug h1a002] fix: payment race condition\n 1 file changed, 3 insertions(+), 1 deletion(-)'} ] },
+  { cap: "Push the fix — now the remote knows about it too — then switch back to <code>main</code>. The stash isn't tied to any branch, so it's still sitting there waiting.",
+    local: { head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'h1a002',parents:['a1a001'],lane:1,order:1,color:'violet',label:'fix: payment race condition'}],
+              branches:[{name:'main',commitId:'a1a001',color:'violet'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git push origin hotfix/urgent-payment-bug'}, {type:'out', text:"Create a pull request for 'hotfix/urgent-payment-bug' by visiting…"}, {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
   { cap: "Before returning to the shelved feature, a small unrelated tweak comes up on <code>main</code> too.",
     areas: { workspace:[{id:'config.yml',status:'modified'}] },
     term: [ {type:'cmd', text:'vim config.yml'} ] },
-  { cap: "Stash it under its <b>own</b> label rather than mixing it with the first — now two independent shelves exist.",
+  { cap: "Stash it under its <b>own</b> label rather than mixing it with the first. Indices are <b>LIFO</b> — the newest is always <code>@{0}</code> — so the search-feature stash you pushed first just shifted from <code>@{0}</code> to <code>@{1}</code>.",
     areas: { workspace:[], stash:['stash@{0}: On main: config tweak','stash@{1}: On main: search feature wip'] },
     term: [ {type:'cmd', text:'git stash push -m "config tweak"'}, {type:'out', text:'Saved working directory and index state On main: config tweak'} ] },
-  { cap: "Ready to resume the <i>search feature</i> specifically: <code>git stash list</code> confirms which index it's at, then <code>git stash apply stash@{1}</code> restores <b>that one</b>, by name.",
+  { cap: "Ready to resume the <i>search feature</i> specifically: <code>git stash list</code> confirms it's now at <code>@{1}</code> — <code>git stash apply stash@{1}</code> restores <b>that one</b>, by name, not by guessing position.",
     areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}] },
     term: [ {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: On main: config tweak\nstash@{1}: On main: search feature wip'},
              {type:'cmd', text:'git stash apply stash@{1}'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py'} ] },
-  { cap: "Unlike <code>pop</code>, <code>apply</code> leaves the entry on the stack. Once the restored work is confirmed, <code>git stash drop stash@{1}</code> removes just that one — the config-tweak shelf is untouched.",
+  { cap: "Unlike <code>pop</code>, <code>apply</code> leaves the entry on the stack. Once the restored work is confirmed, <code>git stash drop stash@{1}</code> removes just that one — the config-tweak shelf (still <code>@{0}</code>) is untouched.",
     areas: { stash:['stash@{0}: On main: config tweak'] },
     term: [ {type:'cmd', text:'git stash drop stash@{1}'}, {type:'out', text:'Dropped stash@{1} (c9a2b1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0)'} ] },
 ]};
