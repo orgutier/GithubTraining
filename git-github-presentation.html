@@ -1231,6 +1231,53 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 20b — WHEN IS REBASE ACTUALLY NEEDED -->
+    <section class="slide" data-section="remote & github">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Local → Remote</span>
+          <h1 class="title">Fast-forward or rebase? It depends on <span class="accent-violet">who moved</span></h1>
+          <h2 class="subtitle">Neither is the default answer. Which one applies depends entirely on whether your branch has commits of its own since the last time you synced.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Only origin moved</div>
+            <p class="lead" style="margin-bottom:10px;">Nobody committed locally since the last sync — there's nothing of yours to preserve.</p>
+            <ul class="bullets compact">
+              <li>Fast-forward is <b>always</b> possible: Git just slides your branch pointer up to match.</li>
+              <li>A plain <code>git pull</code> (or <code>git merge origin/main</code>) does it — no flag, no new commit, nothing to decide.</li>
+              <li><code>--rebase</code> here would still "work," but there's nothing to replay — it's a no-op dressed up as a decision.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Both sides moved — diverged</div>
+            <p class="lead" style="margin-bottom:10px;">You have local commits <i>and</i> origin has commits you don't — a fast-forward is impossible.</p>
+            <ul class="bullets compact">
+              <li><b>Merge</b> (<code>git pull</code>, no flag): ties both histories together with a two-parent merge commit. Nothing rewritten.</li>
+              <li><b>Rebase</b> (<code>git pull --rebase</code>): replays your commits on top of origin's — linear history, but new hashes for every one of yours.</li>
+              <li>Rebase only if those commits are <b>yours alone</b> — never rebase commits someone else has already based work on.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span class="sw" style="background:var(--green)"></span>The rule</div>
+          <p class="lead"><code>git fetch</code> never changes your branch — it only updates <code>origin/main</code>. That makes it always safe to <b>look before deciding</b>. The next slide shows exactly which commands tell you which situation you're in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 20c — DETECTING DIVERGENCE AFTER FETCH -->
+    <section class="slide" data-section="remote & github">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Local → Remote</span>
+          <h1 class="title">After <code style="font-size:.85em;">git fetch</code>, how do you actually know?</h1>
+          <h2 class="subtitle"><code>git fetch</code> alone never changes your branch — so it's always safe to check first. <code>git status</code> and <code>git log</code> answer it directly, no guessing.</h2>
+        </div>
+        <div class="scene" data-scene="diverge-check" data-layout="remote" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 21 — GITHUB PR WORKFLOW -->
     <section class="slide" data-section="remote & github">
       <div class="slide-inner">
@@ -2766,7 +2813,7 @@ S['mental-model'] = { frames: [
     term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'} ] },
   { cap: "④ <b>Stash</b> — a side shelf for uncommitted work you're not ready to commit (it never enters history).",
     areas: { stash: ['stash@{0}: WIP on main: quick experiment'] },
-    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git stash'} ] },
+    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'out', text:"# after that commit, you start a quick experiment in app.py — edits you don't want to commit yet"}, {type:'cmd', text:'git stash'} ] },
   { cap: "⑤ <b>Remote</b> — a copy of this repository hosted elsewhere, like GitHub. <code>git push</code> sends commits there.",
     areas: { remote: [{id:'a1b2c3d — add app.py',status:'clean'}] },
     term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git stash'}, {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   (new) -> main'} ] },
@@ -2823,27 +2870,41 @@ S['branching'] = { frames: [
       {id:'d40a2c',parents:['c3f001'],lane:1,order:3,color:'green',label:'wip: query parser'},{id:'e51b3d',parents:['d40a2c'],lane:1,order:4,color:'green',label:'wip: ranking'}],
       branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'}], head:{type:'branch',ref:'feature/search'} },
     term: [ {type:'cmd', text:'git commit -m "wip: ranking"'} ] },
-  { cap: "<code>git switch -c</code> does both steps <i>at once</i>: create the pointer <b>and</b> move HEAD there, in a single command.",
+  { cap: "HEAD is still on <code>feature/search</code>. <code>switch</code> only moves HEAD when you tell it to — so back to <code>main</code> first, deliberately, before branching a hotfix off of it.",
+    local: { head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
+  { cap: "<code>git switch -c</code> does both steps <i>at once</i>: create the pointer <b>and</b> move HEAD there, in a single command — branching <code>hotfix/typo</code> off <code>main</code>, since that's where HEAD is <i>now</i>.",
     local: { branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'},{name:'hotfix/typo',commitId:'c3f001',color:'red',stack:1}], head:{type:'branch',ref:'hotfix/typo'} },
     term: [ {type:'cmd', text:'git switch -c hotfix/typo'}, {type:'out', text:"Switched to a new branch 'hotfix/typo'"} ] },
 ]};
 
 /* --------------------------------------------------------------- stash */
 S['stash-flow'] = { frames: [
-  { cap: "You're mid-edit on two files, and need to urgently switch branches.",
+  { cap: "You're mid-edit on two files on <code>main</code>, and an urgent bug on another branch needs attention right now.",
     areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}], stash:[] },
     term: [] },
-  { cap: "<code>git stash</code> shelves both changes and returns the workspace to a clean, HEAD-matching state.",
-    areas: { workspace:[], stash:['stash@{0}: WIP on main: 9f0c21a fix: paginate offset'] },
-    term: [ {type:'cmd', text:'git stash'}, {type:'out', text:'Saved working directory and index state WIP on main: 9f0c21a fix: paginate offset'} ] },
-  { cap: "<code>git stash list</code> shows everything shelved — you can stack up more than one.",
-    term: [ {type:'cmd', text:'git stash'}, {type:'out', text:'Saved working directory and index state WIP on main: 9f0c21a fix: paginate offset'},
-             {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: WIP on main: 9f0c21a fix: paginate offset'} ] },
-  { cap: "Urgent work done, back on <code>main</code>: <code>git stash pop</code> restores your changes <b>and</b> removes them from the stash.",
-    areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}], stash:[] },
-    term: [ {type:'cmd', text:'git stash pop'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py\nDropped stash@{0}'} ] },
-  { cap: "<code>git stash apply</code> restores the same way but <b>keeps</b> the entry — handy to apply it on more than one branch. <code>git stash drop</code> discards an entry outright.",
-    term: [ {type:'cmd', text:'git stash apply stash@{0}'}, {type:'out', text:'# same restore, but the stash entry stays in the stack'} ] },
+  { cap: "<code>git stash push -m \"…\"</code> shelves both changes under a label, and returns the workspace to a clean, HEAD-matching state.",
+    areas: { workspace:[], stash:['stash@{0}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash push -m "search feature wip"'}, {type:'out', text:'Saved working directory and index state On main: search feature wip'} ] },
+  { cap: "Workspace is clean, so it's safe to switch — Git would refuse the switch if uncommitted changes conflicted with the target branch.",
+    term: [ {type:'cmd', text:'git switch hotfix/urgent-payment-bug'}, {type:'out', text:"Switched to branch 'hotfix/urgent-payment-bug'"} ] },
+  { cap: "Fix the bug and commit it directly on <code>hotfix/urgent-payment-bug</code> — completely unrelated to the shelved work.",
+    term: [ {type:'cmd', text:'git commit -am "fix: payment race condition"'}, {type:'out', text:'[hotfix/urgent-payment-bug 8f21ac0] fix: payment race condition\n 1 file changed, 3 insertions(+), 1 deletion(-)'} ] },
+  { cap: "Push the fix, then switch back to <code>main</code> — the stash isn't tied to any branch, so it's still sitting there waiting.",
+    term: [ {type:'cmd', text:'git push origin hotfix/urgent-payment-bug'}, {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
+  { cap: "Before returning to the shelved feature, a small unrelated tweak comes up on <code>main</code> too.",
+    areas: { workspace:[{id:'config.yml',status:'modified'}] },
+    term: [ {type:'cmd', text:'vim config.yml'} ] },
+  { cap: "Stash it under its <b>own</b> label rather than mixing it with the first — now two independent shelves exist.",
+    areas: { workspace:[], stash:['stash@{0}: On main: config tweak','stash@{1}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash push -m "config tweak"'}, {type:'out', text:'Saved working directory and index state On main: config tweak'} ] },
+  { cap: "Ready to resume the <i>search feature</i> specifically: <code>git stash list</code> confirms which index it's at, then <code>git stash apply stash@{1}</code> restores <b>that one</b>, by name.",
+    areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: On main: config tweak\nstash@{1}: On main: search feature wip'},
+             {type:'cmd', text:'git stash apply stash@{1}'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py'} ] },
+  { cap: "Unlike <code>pop</code>, <code>apply</code> leaves the entry on the stack. Once the restored work is confirmed, <code>git stash drop stash@{1}</code> removes just that one — the config-tweak shelf is untouched.",
+    areas: { stash:['stash@{0}: On main: config tweak'] },
+    term: [ {type:'cmd', text:'git stash drop stash@{1}'}, {type:'out', text:'Dropped stash@{1} (c9a2b1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0)'} ] },
 ]};
 
 /* ---------------------------------------------------------- fast-forward */
@@ -2880,11 +2941,11 @@ S['threeway-merge'] = { frames: [
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "add validation"'} ] },
-  { cap: "Meanwhile, <code>main</code> kept moving too.",
+  { cap: "Meanwhile, <i>we</i> switch back to <code>main</code> and keep working there too — <code>feature/api</code> is left exactly as it was.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'},
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'}],
       branches:[{name:'main',commitId:'f60110',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'out', text:'# meanwhile, on main…'}, {type:'cmd', text:'git commit -m "fix cors"'} ] },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"}, {type:'cmd', text:'git commit -m "fix cors"'} ] },
   { cap: "...twice.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'},
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'},{id:'a7c220',parents:['f60110'],lane:0,order:2,color:'blue',label:'bump deps'}],
@@ -2895,7 +2956,7 @@ S['threeway-merge'] = { frames: [
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'},{id:'a7c220',parents:['f60110'],lane:0,order:2,color:'blue',label:'bump deps'},
       {id:'b8d331',parents:['a7c220','e5f0aa'],lane:0,order:3,color:'blue',label:"Merge feature/api"}],
       branches:[{name:'main',commitId:'b8d331',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'cmd', text:'git switch main'}, {type:'cmd', text:'git merge feature/api'}, {type:'out', text:"Merge made by the 'ort' strategy.\n 2 files changed, 12 insertions(+)"} ] },
+    term: [ {type:'cmd', text:'git merge feature/api'}, {type:'out', text:"Merge made by the 'ort' strategy.\n 2 files changed, 12 insertions(+)"} ] },
 ]};
 
 /* --------------------------------------------------------------- rebase */
@@ -2911,11 +2972,14 @@ S['rebase-basic'] = { frames: [
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export'},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "pdf export"'} ] },
-  { cap: "Meanwhile main advanced twice, independently.",
+  { cap: "Meanwhile, <i>we</i> switch to <code>main</code> and keep working there too — <code>feature/reports</code> is left exactly as it was.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export'},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export'},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'}],
-      branches:[{name:'main',commitId:'f2d534',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}], head:{type:'branch',ref:'feature/reports'} },
-    term: [ {type:'out', text:'# meanwhile, on main…'}, {type:'cmd', text:'git commit -m "perf: cache"'}, {type:'cmd', text:'git commit -m "fix: null check"'} ] },
+      branches:[{name:'main',commitId:'f2d534',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"}, {type:'cmd', text:'git commit -m "perf: cache"'}, {type:'cmd', text:'git commit -m "fix: null check"'} ] },
+  { cap: "Back on <code>feature/reports</code> — this is the branch about to be rebased, so HEAD needs to be here first.",
+    local: { head:{type:'branch',ref:'feature/reports'} },
+    term: [ {type:'cmd', text:'git switch feature/reports'}, {type:'out', text:"Switched to branch 'feature/reports'"} ] },
   { cap: "<code>git rebase main</code>: Git sets feature's commits aside and prepares to replay them, one by one, on top of main's new tip.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export',ghost:true},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export',ghost:true},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'}],
@@ -2980,19 +3044,25 @@ S['squash-rebase'] = { frames: [
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'77df02',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "wip 3 (typo)"'} ],
     conflict: '' },
-  { cap: "<code>git rebase -i HEAD~3</code> opens an editor listing those 3 commits, oldest first. Changing <code>pick</code> to <code>squash</code> folds a commit into the one above it.",
+  { cap: "<code>git rebase -i HEAD~3</code> opens an editor listing the last 3 commits, oldest first. Every line defaults to <code>pick</code> — keep as-is.",
     term: [ {type:'cmd', text:'git rebase -i HEAD~3'} ],
-    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw">squash</span> 9b1240 wip 2\n<span class="c-kw">squash</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># Rebase c1a001..77df02 onto c1a001</span>\n<span class="c-com">#</span>\n<span class="c-com"># p, pick &lt;commit&gt;  = use commit</span>\n<span class="c-com"># s, squash &lt;commit&gt; = use commit, meld into previous</span>\n<span class="c-com"># f, fixup &lt;commit&gt;  = like squash, discard this message</span>' },
-  { cap: "Saving triggers the fold — Git rewinds and prepares to replay + merge the three into one.",
+    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw">pick</span> 9b1240 wip 2\n<span class="c-kw">pick</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># Rebase c1a001..77df02 onto c1a001</span>\n<span class="c-com">#</span>\n<span class="c-com"># Commands:</span>\n<span class="c-com"># p, pick &lt;commit&gt;   = use commit</span>\n<span class="c-com"># s, squash &lt;commit&gt; = use commit, meld into previous commit</span>\n<span class="c-com"># f, fixup &lt;commit&gt;  = like squash, but discard this commit\'s message</span>\n<span class="c-com"># d, drop &lt;commit&gt;   = remove commit</span>' },
+  { cap: "It's a normal text file — you edit it yourself. Change <code>pick</code> to <code>squash</code> on the two lines you want folded into the one above them.",
+    term: [ {type:'cmd', text:'git rebase -i HEAD~3'}, {type:'out', text:'# editing the todo list…'} ],
+    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw" style="color:var(--amber)">squash</span> 9b1240 wip 2\n<span class="c-kw" style="color:var(--amber)">squash</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># squash 9b1240 → melds into a2c114, combining both messages</span>\n<span class="c-com"># squash 77df02 → melds into that result too — all three become one</span>' },
+  { cap: "Save and quit the todo list — in Vim that's <kbd>Esc</kbd> then <code>:wq</code>. That save is what tells Git to act: it rewinds to <code>c1a001</code> and starts replaying the list top to bottom.",
     local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'a2c114',parents:['c1a001'],lane:1,order:1,color:'green',label:'wip',ghost:true},{id:'9b1240',parents:['a2c114'],lane:1,order:2,color:'green',label:'wip 2',ghost:true},{id:'77df02',parents:['9b1240'],lane:1,order:3,color:'green',label:'wip 3 (typo)',ghost:true}],
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'77df02',color:'green'}] },
-    term: [ {type:'out', text:'# editor closed — Git folds the three commits'} ],
-    conflict: '<span class="c-com"># combining messages, then opening one final editor…</span>' },
-  { cap: "One hash, one message, ready for review — feature/search now points straight at it.",
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Rebasing (1/3)\nRebasing (2/3)\nRebasing (3/3)'} ],
+    conflict: '<span class="c-com"># todo list saved — Git now works through it top to bottom</span>' },
+  { cap: "Squashing opens <b>one more editor</b> — this time for the combined commit message, pre-filled with all three originals underneath each other.",
+    term: [ {type:'out', text:'# a second editor opens, for the merged commit message'} ],
+    conflict: '<span class="c-com"># This is a combination of 3 commits.</span>\n<span class="c-com"># This is the 1st commit message:</span>\nwip\n<span class="c-com">\n# This is the commit message #2:</span>\nwip 2\n<span class="c-com">\n# This is the commit message #3:</span>\nwip 3 (typo)' },
+  { cap: "You delete the placeholder lines and type one message that actually describes the change, then <kbd>Esc</kbd>, <code>:wq</code> — <b>that</b> save is the end decision. <code>feature/search</code> now points straight at the single result.",
     local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'5e21ab0',parents:['c1a001'],lane:1,order:4,color:'green',label:'search: add typo-tolerant matching'}],
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'5e21ab0',color:'green'}] },
-    term: [ {type:'out', text:'Successfully rebased and updated refs/heads/feature/search.'} ],
-    conflict: 'git log --oneline -1\n<span class="o-green">5e21ab0</span> (HEAD -&gt; feature/search) search: add typo-tolerant matching' },
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/search.'} ],
+    conflict: 'search: add typo-tolerant matching\n<span class="c-com">\n# hand-written message — the three "wip" placeholders are gone</span>' },
 ]};
 
 /* ------------------------------------------------------- conflict-merge */
@@ -3141,13 +3211,59 @@ S['remote-basic'] = { frames: [
       {id:'e5e005',parents:['d4d004'],lane:1,order:4,color:'violet',label:'feat: dark mode'}],
       branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
     term: [ {type:'cmd', text:'git fetch origin'}, {type:'out', text:'From github.com:acme/app\n   d4d004..e5e005  main -> origin/main'} ] },
-  { cap: "<code>git pull</code> is really <code>fetch</code> + <code>merge</code> (or <code>--rebase</code>). Since your <code>main</code> has no unique commits here, it's simply a fast-forward.",
+  { cap: "Before pulling, <code>git status</code> says exactly what's going on — no guessing: <b>behind, and can be fast-forwarded</b>. No local-only commits exist here, so there's nothing of yours to merge or replay.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch is behind 'origin/main' by 1 commit, and can be fast-forwarded.\n  (use \"git pull\" to update your local branch)"} ] },
+  { cap: "<code>git pull</code> is <code>fetch</code> + <code>merge</code> (or <code>--rebase</code>) — but confirmed fast-forward-only, so no flag is needed: there's nothing local to preserve, Git just slides the pointer.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'ci setup'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'},
       {id:'e5e005',parents:['d4d004'],lane:0,order:4,color:'violet',label:'feat: dark mode'}],
       branches:[{name:'main',commitId:'e5e005',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
-    term: [ {type:'cmd', text:'git pull --rebase origin main'}, {type:'out', text:'Successfully rebased and updated refs/heads/main.'} ] },
+    term: [ {type:'cmd', text:'git pull origin main'}, {type:'out', text:'Updating d4d004..e5e005\nFast-forward\n 1 file changed'} ] },
   { cap: "Fully in sync again — until the next commit starts the cycle over.",
     term: [ {type:'cmd', text:'git log --oneline -1'}, {type:'out', text:'e5e005 (HEAD -> main, origin/main) feat: dark mode'} ] },
+]};
+
+/* -------------------------------------------------------- diverge-check */
+S['diverge-check'] = { frames: [
+  { cap: "Local and <code>origin/main</code> start in sync.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'}],
+             branches:[{name:'main',commitId:'b2b002',color:'blue'},{name:'origin/main',commitId:'b2b002',color:'violet',stack:1}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'}],
+              branches:[{name:'main',commitId:'b2b002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git log --oneline -1'}, {type:'out', text:'b2b002 (HEAD -> main, origin/main) add readme'} ] },
+  { cap: "A teammate pushes a commit straight to the remote — only it moves; your local <code>main</code> doesn't know yet.",
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'violet',label:'fix: typo'}],
+              branches:[{name:'main',commitId:'c3c003',color:'violet'}] },
+    term: [ {type:'out', text:"# meanwhile, a teammate pushes 'fix: typo'"} ] },
+  { cap: "<code>git fetch</code> downloads it and moves your <code>origin/main</code> bookmark — <code>main</code> itself still hasn't moved.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:1,order:2,color:'violet',label:'fix: typo'}],
+             branches:[{name:'main',commitId:'b2b002',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'out', text:'From github.com:acme/app\n   b2b002..c3c003  main -> origin/main'} ] },
+  { cap: "<code>git status</code> says it plainly: <b>behind, and can be fast-forwarded</b>. No local-only commits exist, so there's nothing to merge or rebase.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch is behind 'origin/main' by 1 commit, and can be fast-forwarded.\n  (use \"git pull\" to update your local branch)"} ] },
+  { cap: "Confirmed fast-forward — a plain <code>git pull</code> (no <code>--rebase</code>, nothing of yours to replay) just slides the pointer.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'}],
+             branches:[{name:'main',commitId:'c3c003',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git pull'}, {type:'out', text:'Updating b2b002..c3c003\nFast-forward\n 1 file changed'} ] },
+  { cap: "Now the other case: you make a local commit of your own, <i>before</i> checking in again.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'}],
+             branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git commit -m "fix: pagination"'} ] },
+  { cap: "…and, independently, a teammate pushes again too.",
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'violet',label:'fix: typo'},{id:'e5e005',parents:['c3c003'],lane:0,order:3,color:'violet',label:'feat: dark mode'}],
+              branches:[{name:'main',commitId:'e5e005',color:'violet'}] },
+    term: [ {type:'out', text:"# meanwhile, another teammate pushes 'feat: dark mode'"} ] },
+  { cap: "<code>git fetch</code>, then <code>git status</code> again — this time: <b>diverged</b>, with a commit count on each side. Fast-forward is no longer possible.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'},{id:'e5e005',parents:['c3c003'],lane:1,order:3,color:'violet',label:'feat: dark mode'}],
+             branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch and 'origin/main' have diverged,\nand have 1 and 1 different commits each, respectively.\n  (use \"git pull\" to merge the remote branch into yours)"} ] },
+  { cap: "<code>git log --oneline main..origin/main</code> lists what <i>they</i> have that you don't; swap the order to see what's local-only. Now it's an informed choice, not a guess.",
+    term: [ {type:'cmd', text:'git log --oneline main..origin/main'}, {type:'out', text:'e5e005 feat: dark mode'}, {type:'cmd', text:'git log --oneline origin/main..main'}, {type:'out', text:'d4d004 fix: pagination'} ] },
+  { cap: "Only <i>now</i>, with divergence confirmed, does rebase-vs-merge even apply — here, <code>git pull --rebase</code> to keep history linear.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},
+      {id:'e5e005',parents:['c3c003'],lane:0,order:3,color:'blue',label:'feat: dark mode'},{id:'d4d004',parents:['c3c003'],lane:1,order:3,color:'blue',label:'fix: pagination',ghost:true},
+      {id:'f7f007',parents:['e5e005'],lane:0,order:4,color:'blue',label:'fix: pagination'}],
+             branches:[{name:'main',commitId:'f7f007',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git pull --rebase origin main'}, {type:'out', text:'Successfully rebased and updated refs/heads/main.'} ] },
 ]};
 
 /* -------------------------------------------------------- full-picture */
@@ -3202,13 +3318,18 @@ S['process-squash'] = { frames: [
     term: [ {type:'cmd', text:'git commit -am "fix: off-by-one at tier boundary"'} ] },
   { cap: "Pushing gets <b>rejected</b> — a teammate already pushed a commit to this same branch, and the local history doesn't include it.",
     term: [ {type:'cmd', text:'git push origin feature/pricing'}, {type:'out', text:'<span class="o-red">! [rejected]        feature/pricing -> feature/pricing (fetch first)</span>\nerror: failed to push some refs\nhint: Updates were rejected because the remote contains work that you do\nhint: not have locally. This is usually caused by another repository\nhint: pushing to the same ref.'} ] },
-  { cap: "<code>git fetch</code> + <code>pull --rebase</code> lays the teammate's commit down first, then replays both of yours on top — new hashes for both, since their parent changed. No merge bubble, no rejection on the next push.",
+  { cap: "Before reaching for a fix: <code>git fetch</code> then <code>git status</code> confirms exactly what happened — <b>diverged</b>, not just behind, since 2 local commits exist that the remote doesn't have either.",
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git status'}, {type:'out', text:"On branch feature/pricing\nYour branch and 'origin/feature/pricing' have diverged,\nand have 2 and 1 different commits each, respectively.\n  (use \"git pull\" to merge the remote branch into yours)"} ] },
+  { cap: "Confirmed diverged, and this branch is entirely yours to rewrite (no one else has based work on it) — <code>pull --rebase</code> lays the teammate's commit down first, then replays both of yours on top. New hashes for both, since their parent changed. No merge bubble, no rejection on the next push.",
     local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'t9c113',parents:['m1a001'],lane:1,order:1,color:'violet',label:"teammate: edge-case tests"},{id:'p6a006',parents:['t9c113'],lane:1,order:2,color:'green',label:'pricing: add volume-discount tier'},{id:'p7b007',parents:['p6a006'],lane:1,order:3,color:'green',label:'fix: off-by-one at tier boundary'}],
              branches:[{name:'main',commitId:'m1a001',color:'blue'},{name:'feature/pricing',commitId:'p7b007',color:'green'}] },
     term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git pull --rebase origin feature/pricing'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
-  { cap: "Before opening the PR, tidy the branch: <code>git rebase -i</code> lists every commit as an editable <i>todo</i>. The fixup gets marked <code class=\"c-kw\" style=\"color:var(--blue)\">squash</code> into the commit above it — but the teammate's commit stays <code class=\"c-kw\" style=\"color:var(--blue)\">pick</code>, untouched: it isn't yours to rewrite.",
-    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw">squash</span> p7b007 fix: off-by-one at tier boundary\n\n<span class="c-com"># squash: meld into the commit above, combining both messages</span>',
+  { cap: "Before opening the PR, tidy the branch: <code>git rebase -i main</code> opens the todo list for every commit since the shared base — all default to <code>pick</code>, oldest first.",
+    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw">pick</span> p7b007 fix: off-by-one at tier boundary',
     term: [ {type:'cmd', text:'git rebase -i main'} ] },
+  { cap: "Only the <i>last</i> line changes to <code class=\"c-kw\" style=\"color:var(--amber)\">squash</code> — it's a tiny fixup of the commit right above it. The teammate's commit stays <code class=\"c-kw\" style=\"color:var(--blue)\">pick</code>, untouched: it isn't yours to rewrite.",
+    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw" style="color:var(--amber)">squash</span> p7b007 fix: off-by-one at tier boundary\n\n<span class="c-com"># squash → meld into the commit above, combining both messages</span>',
+    term: [ {type:'cmd', text:'git rebase -i main'}, {type:'out', text:'# editing the todo list…'} ] },
   { cap: "Reapplying the squash touches the same lines your teammate's tests cover, so it <b>conflicts</b>.",
     conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">assert price(order) == order.subtotal * 0.95</span>\n<span class="sep">=======</span>\n<span class="theirs">assert price(order) == order.subtotal - discount(order)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; fix: off-by-one at tier boundary</span>',
     term: [ {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in tests/test_pricing.py</span>\nerror: could not apply p7b007… fix: off-by-one at tier boundary'} ] },
