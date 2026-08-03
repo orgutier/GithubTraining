@@ -562,28 +562,64 @@ table.cmp code{ font-size:.85em; }
 .cheat-card li b{ color:var(--text); font-weight:600; }
 
 /* ======================================================================
-   CHROME / NAV
+   CHROME / NAV — collapsible sidebar, left edge, opens on mouse proximity
    ====================================================================== */
-.chrome{
-  position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-  display:flex; align-items:center; gap:18px;
-  background:rgba(16,21,29,.92); backdrop-filter:blur(10px);
-  border:1px solid var(--border); border-radius:12px; padding:8px 14px;
-  z-index:60; box-shadow:0 10px 30px rgba(0,0,0,.4);
+.navzone{
+  position:fixed; top:0; left:0; width:34px; height:100%; z-index:59;
 }
-.chrome-left{ display:flex; align-items:center; gap:10px; }
+.chrome{
+  position:fixed; top:50%; left:14px; transform:translate(-115%,-50%);
+  display:flex; flex-direction:column; align-items:stretch; gap:12px;
+  background:rgba(16,21,29,.95); backdrop-filter:blur(10px);
+  border:1px solid var(--border); border-radius:14px; padding:16px 14px;
+  z-index:60; box-shadow:0 14px 34px rgba(0,0,0,.5);
+  width:206px; max-height:80vh;
+  opacity:0; pointer-events:none;
+  transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+}
+.chrome.open{ transform:translate(0,-50%); opacity:1; pointer-events:auto; }
+/* handle sliver — stays visible at the edge while collapsed, hints the sidebar exists */
+.chrome-handle{
+  position:fixed; top:50%; left:0; transform:translateY(-50%);
+  width:5px; height:64px; border-radius:0 6px 6px 0;
+  background:var(--border-lt); z-index:58;
+  transition:background .25s ease, height .25s ease, opacity .25s ease;
+}
+.chrome-handle.active{ background:var(--blue); height:80px; }
+
+.chrome-brand{ display:flex; flex-direction:column; gap:4px; }
 .brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); }
 .brand-dot{ color:var(--amber); }
 .section-tag{
   font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
-  border-left:1px solid var(--border-lt); padding-left:10px;
+  border-top:1px solid var(--border-lt); padding-top:6px;
 }
-.chrome-mid{ display:flex; gap:5px; max-width:280px; overflow:hidden; }
-.stepdot{ width:6px; height:6px; border-radius:50%; background:var(--border-lt); transition:all .25s ease; flex:none; }
+.chrome-count{ display:flex; align-items:center; gap:8px; }
+.chrome-label{
+  font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--text-faint); margin-bottom:2px;
+}
+.chrome-dots-wrap{
+  display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto;
+  padding:2px 4px 2px 2px;
+}
+.stepdot{
+  width:8px; height:8px; border-radius:50%; background:var(--border-lt); flex:none;
+  transition:all .2s ease; cursor:pointer;
+}
+.stepdot:hover{ filter:brightness(1.6); transform:scale(1.15); }
 .stepdot.done{ background:var(--blue); }
-.stepdot.current{ background:var(--amber); width:16px; border-radius:3px; }
-.chrome-right{ display:flex; align-items:center; gap:8px; }
-.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); margin:0 4px; }
+.stepdot.current{ background:var(--amber); height:20px; border-radius:4px; }
+.chrome-subdots-wrap{ display:flex; flex-wrap:wrap; gap:5px; padding-top:4px; border-top:1px solid var(--border-lt); }
+.subdot{
+  width:6px; height:6px; border-radius:50%; background:var(--border-lt); flex:none;
+  transition:all .2s ease; cursor:pointer;
+}
+.subdot:hover{ filter:brightness(1.6); transform:scale(1.2); }
+.subdot.done{ background:var(--blue); }
+.subdot.current{ background:var(--amber); width:14px; border-radius:3px; }
+.chrome-actions{ display:flex; align-items:center; gap:8px; }
+.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); }
 .slide-count.sub-count{
   color:var(--amber); background:rgba(227,179,65,.1); border:1px solid rgba(227,179,65,.35);
   border-radius:6px; padding:3px 8px; margin:0;
@@ -1360,22 +1396,36 @@ table.cmp code{ font-size:.85em; }
     <!-- SLIDES-MARKER -->
   </main>
 
-  <!-- Chrome / controls -->
-  <div class="chrome">
-    <div class="chrome-left">
+  <!-- Chrome / controls — hover-activated sidebar on the left edge -->
+  <div class="navzone" id="navZone"></div>
+  <div class="chrome-handle" id="chromeHandle"></div>
+  <nav class="chrome" id="chromeNav">
+    <div class="chrome-brand">
       <span class="brand">git<span class="brand-dot">·</span>log</span>
       <span class="section-tag" id="sectionTag">intro</span>
     </div>
-    <div class="chrome-mid" id="stepDots"></div>
-    <div class="chrome-right">
-      <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
-      <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+
+    <div class="chrome-count">
       <span class="slide-count"><span id="slideNum">1</span> / <span id="slideTotal">1</span></span>
       <span class="slide-count sub-count" id="subCount" style="display:none;"></span>
-      <button class="nav-btn" id="prevBtn" aria-label="Previous slide">‹</button>
-      <button class="nav-btn" id="nextBtn" aria-label="Next slide">›</button>
     </div>
-  </div>
+
+    <div>
+      <div class="chrome-label">Slides</div>
+      <div class="chrome-dots-wrap scroll-y" id="stepDots"></div>
+    </div>
+
+    <div class="chrome-subdots-wrap" id="subDots" style="display:none;"></div>
+
+    <div class="chrome-actions">
+      <button class="nav-btn" id="prevBtn" aria-label="Previous slide" title="Previous (←)">‹</button>
+      <button class="nav-btn" id="nextBtn" aria-label="Next slide" title="Next (→ / Space)">›</button>
+    </div>
+    <div class="chrome-actions">
+      <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+      <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+    </div>
+  </nav>
 
   <!-- Help overlay -->
   <div class="overlay" id="helpOverlay">
@@ -1424,20 +1474,24 @@ const Deck = {
     this.buildStepDots();
     this.goTo(0, true);
     this.wireEvents();
+    setupChromeHover();
     this.scale();
     window.addEventListener('resize', ()=>this.scale());
   },
 
   scale(){
     const vw = window.innerWidth, vh = window.innerHeight;
-    const pad = 90; // room for chrome bar
+    const pad = 24; // breathing room now that nav lives in a side sidebar, not a bottom bar
     const s = Math.min(vw/1280, (vh-pad)/720) ;
     document.getElementById('deck').style.transform = `translate(-50%,-50%) scale(${Math.max(s,0.32)})`;
   },
 
   buildStepDots(){
     const wrap = document.getElementById('stepDots');
-    wrap.innerHTML = this.slides.map((_,i)=>`<span class="stepdot" data-i="${i}"></span>`).join('');
+    wrap.innerHTML = this.slides.map((_,i)=>`<span class="stepdot" data-i="${i}" title="${i+1}. ${this.slides[i].dataset.section||''}"></span>`).join('');
+    wrap.querySelectorAll('.stepdot').forEach(dot=>{
+      dot.addEventListener('click', ()=>this.goTo(parseInt(dot.dataset.i,10)));
+    });
   },
 
   updateChrome(){
@@ -1455,8 +1509,10 @@ const Deck = {
   updateSubCounter(){
     const sub = document.getElementById('subCount');
     if(!sub) return;
+    const subDots = document.getElementById('subDots');
+    const clearSubDots = ()=>{ if(subDots){ subDots.style.display='none'; subDots.innerHTML=''; delete subDots.dataset.for; } };
     const s = this.slides[this.idx];
-    if(!s){ sub.style.display='none'; return; }
+    if(!s){ sub.style.display='none'; clearSubDots(); return; }
     const sceneEl = s.querySelector('[data-scene]');
     const quizEl = s.querySelector('[data-quiz]');
     if(sceneEl){
@@ -1465,9 +1521,29 @@ const Deck = {
         const step = Math.max(0, scene.idx+1);
         sub.textContent = `Step ${step} / ${scene.frames.length}`;
         sub.style.display = 'inline-block';
+        if(subDots){
+          const key = sceneEl.dataset.scene;
+          if(subDots.dataset.for !== key){
+            subDots.dataset.for = key;
+            subDots.innerHTML = scene.frames.map((_,i)=>`<span class="subdot" data-i="${i}" title="Step ${i+1}"></span>`).join('');
+            subDots.querySelectorAll('.subdot').forEach(dot=>{
+              dot.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                scene.goToFrame(parseInt(dot.dataset.i,10));
+                this.updateSubCounter();
+              });
+            });
+          }
+          subDots.querySelectorAll('.subdot').forEach((d,i)=>{
+            d.classList.toggle('done', i < scene.idx);
+            d.classList.toggle('current', i === scene.idx);
+          });
+          subDots.style.display = 'flex';
+        }
         return;
       }
     }
+    clearSubDots();
     if(quizEl){
       const quiz = this.quizzes.get(quizEl);
       if(quiz){
@@ -1585,6 +1661,34 @@ function toggleFullscreen(){
 }
 function showHelp(show){
   document.getElementById('helpOverlay').classList.toggle('show', show);
+}
+
+/* sidebar nav: minimized against the left edge, opens when the mouse is near it or over it */
+function setupChromeHover(){
+  const zone = document.getElementById('navZone');
+  const chrome = document.getElementById('chromeNav');
+  const handle = document.getElementById('chromeHandle');
+  if(!zone || !chrome) return;
+  let closeTimer = null;
+  function open(){
+    clearTimeout(closeTimer);
+    chrome.classList.add('open');
+    if(handle) handle.classList.add('active');
+  }
+  function scheduleClose(){
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(()=>{
+      chrome.classList.remove('open');
+      if(handle) handle.classList.remove('active');
+    }, 260);
+  }
+  zone.addEventListener('mouseenter', open);
+  zone.addEventListener('mouseleave', scheduleClose);
+  chrome.addEventListener('mouseenter', open);
+  chrome.addEventListener('mouseleave', scheduleClose);
+  // brief peek on load so the sidebar's presence is discoverable
+  open();
+  closeTimer = setTimeout(scheduleClose, 1800);
 }
 
 /* ============================= SCENE TEMPLATE BUILDER ============================= */
@@ -1713,6 +1817,15 @@ class Scene{
       this.playTimer = setTimeout(step, 1450);
     };
     step();
+  }
+
+  // jump directly to a given frame — frames are cumulative diffs, so going
+  // backward (or to frame 0) has to replay from the start
+  goToFrame(target){
+    clearTimeout(this.playTimer); this.playTimer=null;
+    target = Math.max(0, Math.min(target, this.frames.length-1));
+    if(target < this.idx) this.reset();
+    while(this.idx < target) this.stepForward();
   }
 
   applyFrame(f){
