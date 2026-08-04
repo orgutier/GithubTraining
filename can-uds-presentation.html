@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAN &amp; UDS — Classical, FD, ISO-TP &amp; Diagnostic Services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ======================================================================
+   TOKENS
+   ====================================================================== */
+:root{
+  --ink:        #0a0d12;
+  --panel:      #10151d;
+  --panel-2:    #161c27;
+  --panel-3:    #1c2431;
+  --border:     #232b38;
+  --border-lt:  #2e3849;
+  --text:       #e6edf3;
+  --text-dim:   #8b96a5;
+  --text-faint: #5b6472;
+
+  --blue:       #6cb6ff;
+  --blue-dim:   #2c4a6b;
+  --green:      #7ee787;
+  --green-dim:  #234a2c;
+  --red:        #ff7b72;
+  --red-dim:    #4a2323;
+  --amber:      #e3b341;
+  --amber-dim:  #4a3c17;
+  --violet:     #d2a8ff;
+  --violet-dim: #3b2a52;
+
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --slide-w: 1280px;
+  --slide-h: 720px;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; height:100%; background:var(--ink); color:var(--text); font-family:var(--font-sans); overflow:hidden; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4,p,ul,ol,figure{ margin:0; padding:0; }
+ul,ol{ list-style:none; }
+button{ font-family:inherit; cursor:pointer; }
+input,select{ font-family:inherit; }
+::selection{ background:var(--amber-dim); color:var(--amber); }
+@media (prefers-reduced-motion: reduce){ *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; } }
+
+#app{ position:relative; width:100%; height:100%; }
+.progress-rail{ position:fixed; top:0; left:0; width:100%; height:3px; background:var(--panel); z-index:50; }
+.progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--blue),var(--green)); transition:width .35s ease; }
+
+#deck{ position:absolute; top:50%; left:50%; width:var(--slide-w); height:var(--slide-h); transform-origin:center center; transform:translate(-50%,-50%) scale(1); }
+
+.slide{
+  position:absolute; inset:0; width:var(--slide-w); height:var(--slide-h);
+  background:
+    radial-gradient(ellipse 900px 500px at 85% -10%, rgba(108,182,255,0.07), transparent 60%),
+    radial-gradient(ellipse 700px 500px at -5% 110%, rgba(126,231,135,0.06), transparent 60%),
+    var(--ink);
+  border-radius:14px; border:1px solid var(--border);
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateX(24px) scale(.99);
+  transition:opacity .45s ease, transform .45s ease, visibility 0s linear .45s;
+  overflow:hidden;
+}
+.slide.active{ opacity:1; visibility:visible; pointer-events:auto; transform:translateX(0) scale(1); transition:opacity .45s ease, transform .45s ease, visibility 0s linear 0s; }
+.slide.prev{ transform:translateX(-24px) scale(.99); }
+
+.slide-inner{ position:relative; width:100%; height:100%; padding:44px 60px 32px 60px; display:flex; flex-direction:column; gap:14px; }
+.slide-inner.pad-tight{ padding:36px 52px 24px; }
+.slide-inner.center{ align-items:center; justify-content:center; text-align:center; }
+
+.eyebrow{ display:inline-flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:12.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); }
+.eyebrow::before{ content:''; width:7px; height:7px; border-radius:2px; background:var(--amber); display:inline-block; transform:rotate(45deg); }
+.eyebrow.blue::before{ background:var(--blue); }
+.eyebrow.green::before{ background:var(--green); }
+.eyebrow.red::before{ background:var(--red); }
+.eyebrow.violet::before{ background:var(--violet); }
+
+.slide h1.title{ font-family:var(--font-mono); font-weight:800; letter-spacing:-0.01em; font-size:36px; line-height:1.14; color:var(--text); max-width:980px; }
+.slide h1.title .accent{ color:var(--amber); }
+.slide h1.title .accent-blue{ color:var(--blue); }
+.slide h1.title .accent-green{ color:var(--green); }
+.slide h1.title .accent-red{ color:var(--red); }
+.slide h1.title .accent-violet{ color:var(--violet); }
+
+.slide h2.subtitle{ font-family:var(--font-sans); font-weight:500; font-size:15.5px; color:var(--text-dim); max-width:900px; line-height:1.5; }
+.slide-head{ display:flex; flex-direction:column; gap:8px; margin-bottom:2px; flex:none; }
+
+.cols{ display:grid; gap:22px; flex:1; min-height:0; align-items:stretch; align-content:stretch; }
+.cols.c2{ grid-template-columns:1fr 1fr; grid-template-rows:1fr; }
+.cols.c2-wide{ grid-template-columns:1.3fr 1fr; grid-template-rows:1fr; }
+.cols.c2-narrow{ grid-template-columns:1fr 1.3fr; grid-template-rows:1fr; }
+.cols.c3{ grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr; }
+.stack{ display:flex; flex-direction:column; gap:12px; min-height:0; }
+.row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.grow{ flex:1; min-height:0; }
+.scroll-y{ overflow-y:auto; }
+.scroll-y::-webkit-scrollbar{ width:6px; }
+.scroll-y::-webkit-scrollbar-thumb{ background:var(--border-lt); border-radius:3px; }
+
+.panel{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.panel-title{ font-family:var(--font-mono); font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin-bottom:9px; display:flex; align-items:center; gap:8px; }
+.panel-title .sw{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+
+p.lead{ font-size:14.5px; line-height:1.6; color:var(--text-dim); max-width:78ch; }
+p.lead b{ color:var(--text); font-weight:600; }
+p.lead code{ color:var(--amber); }
+
+ul.bullets{ display:flex; flex-direction:column; gap:8px; }
+ul.bullets li{ font-size:14px; line-height:1.5; color:var(--text-dim); padding-left:20px; position:relative; }
+ul.bullets li::before{ content:'→'; position:absolute; left:0; color:var(--blue); font-family:var(--font-mono); }
+ul.bullets li b{ color:var(--text); font-weight:600; }
+ul.bullets li code{ color:var(--amber); }
+ul.bullets.compact li{ font-size:12.8px; }
+
+code, .code{ font-family:var(--font-mono); background:var(--panel-3); color:var(--amber); padding:2px 7px; border-radius:4px; font-size:.9em; border:1px solid var(--border-lt); }
+pre.code-block{ font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; overflow:auto; color:var(--text); }
+pre.code-block .c-com{ color:var(--text-faint); font-style:italic; }
+pre.code-block .c-str{ color:var(--green); }
+pre.code-block .c-kw{ color:var(--blue); }
+pre.code-block .c-req{ color:var(--blue); }
+pre.code-block .c-resp{ color:var(--green); }
+pre.code-block .c-neg{ color:var(--red); }
+pre.code-block .c-amber{ color:var(--amber); }
+
+table.cmp{ width:100%; border-collapse:collapse; font-size:12.8px; }
+table.cmp th{ text-align:left; font-family:var(--font-mono); font-size:10.8px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); padding:7px 10px; border-bottom:1px solid var(--border-lt); }
+table.cmp td{ padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text-dim); vertical-align:top; }
+table.cmp tr:last-child td{ border-bottom:none; }
+table.cmp td.hl{ color:var(--text); font-weight:600; }
+table.cmp code{ font-size:.85em; }
+table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
+
+.pill{ display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; border:1px solid var(--border-lt); color:var(--text-dim); }
+.pill.blue{ color:var(--blue); border-color:var(--blue-dim); background:var(--blue-dim); }
+.pill.green{ color:var(--green); border-color:var(--green-dim); background:var(--green-dim); }
+.pill.red{ color:var(--red); border-color:var(--red-dim); background:var(--red-dim); }
+.pill.violet{ color:var(--violet); border-color:var(--violet-dim); background:var(--violet-dim); }
+.pill.amber{ color:var(--amber); border-color:var(--amber-dim); background:var(--amber-dim); }
+.pill.gray{ color:var(--text-dim); }
+
+.cheat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.cheat-card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+.cheat-card h4{ font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; display:flex; align-items:center; gap:7px; }
+.cheat-card h4 .sw{ width:8px; height:8px; border-radius:2px; }
+.cheat-card ul{ display:flex; flex-direction:column; gap:5px; }
+.cheat-card li{ font-family:var(--font-mono); font-size:11px; color:var(--text-dim); display:flex; justify-content:space-between; gap:8px; }
+.cheat-card li b{ color:var(--text); font-weight:600; }
+
+/* ---------------- chrome / nav ---------------- */
+.navzone{ position:fixed; top:0; left:0; width:40px; height:100%; z-index:59; }
+.chrome{ position:fixed; top:50%; left:10px; transform:translateY(-50%); display:flex; flex-direction:column; gap:10px; background:rgba(16,21,29,.95); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:14px; padding:14px 8px; width:34px; max-height:82vh; overflow:hidden; z-index:60; box-shadow:0 14px 34px rgba(0,0,0,.5); transition:width .32s cubic-bezier(.4,0,.2,1), padding .32s ease; }
+.chrome.open{ width:290px; padding:16px 14px; }
+.chrome-fade{ max-height:0; opacity:0; overflow:hidden; pointer-events:none; transition:max-height .3s ease, opacity .18s ease; }
+.chrome.open .chrome-fade{ max-height:200px; opacity:1; pointer-events:auto; }
+.chrome-brand{ display:flex; flex-direction:column; gap:4px; }
+.brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; }
+.brand-dot{ color:var(--amber); }
+.section-tag{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); border-top:1px solid var(--border-lt); padding-top:6px; white-space:nowrap; }
+.chrome-count{ display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.chrome-label{ font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:4px; white-space:nowrap; }
+.chrome-dots-wrap{ display:flex; flex-direction:column; gap:2px; max-height:340px; overflow-y:auto; overflow-x:hidden; }
+.dot-row{ display:flex; align-items:center; gap:10px; padding:3px 2px; border-radius:6px; cursor:pointer; transition:background .15s ease; }
+.dot-row:hover{ background:var(--panel-2); }
+.dot-row .dot-label{ font-family:var(--font-mono); font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:0; opacity:0; transition:max-width .3s ease, opacity .2s ease; }
+.chrome.open .dot-row .dot-label{ max-width:210px; opacity:1; }
+.dot-row.current .dot-label{ color:var(--text); font-weight:600; }
+.stepdot{ width:8px; height:8px; border-radius:50%; background:var(--border-lt); flex:none; transition:all .2s ease; }
+.dot-row:hover .stepdot{ filter:brightness(1.6); transform:scale(1.15); }
+.stepdot.done{ background:var(--blue); }
+.stepdot.current{ background:var(--amber); height:20px; border-radius:4px; }
+.chrome-actions{ display:flex; align-items:center; gap:8px; }
+.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); white-space:nowrap; }
+.chip-btn, .nav-btn{ background:var(--panel-2); border:1px solid var(--border-lt); color:var(--text-dim); width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .2s ease; flex:none; }
+.chip-btn:hover, .nav-btn:hover{ color:var(--text); border-color:var(--blue); }
+.nav-btn{ font-size:18px; }
+
+.overlay{ position:fixed; inset:0; background:rgba(5,7,10,.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; visibility:hidden; transition:opacity .25s ease, visibility 0s linear .25s; }
+.overlay.show{ opacity:1; visibility:visible; transition:opacity .25s ease; }
+.overlay-card{ background:var(--panel); border:1px solid var(--border-lt); border-radius:14px; padding:26px 30px; width:380px; }
+.overlay-card h3{ font-family:var(--font-mono); font-size:16px; margin-bottom:16px; color:var(--text); }
+.overlay-card ul{ display:flex; flex-direction:column; gap:11px; margin-bottom:18px; }
+.overlay-card li{ display:flex; align-items:center; gap:12px; font-size:13.5px; color:var(--text-dim); }
+.overlay-card kbd{ font-family:var(--font-mono); background:var(--panel-3); border:1px solid var(--border-lt); border-radius:5px; padding:3px 8px; font-size:12px; color:var(--text); min-width:26px; text-align:center; }
+
+.footnote{ font-size:12px; color:var(--text-faint); }
+.two-line-title{ display:flex; flex-direction:column; gap:2px; }
+
+/* ======================================================================
+   BITFIELD (click-to-inspect frame layout)
+   ====================================================================== */
+.bitfield{ display:flex; gap:3px; align-items:stretch; }
+.bitcell{
+  flex: var(--w) 0 auto; min-width:30px; background:var(--panel); border:1px solid var(--border-lt);
+  border-top:3px solid var(--c, var(--border-lt)); border-radius:6px; padding:9px 5px 7px;
+  text-align:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--text-dim);
+  cursor:pointer; transition:all .15s ease; position:relative; line-height:1.25;
+}
+.bitcell:hover{ color:var(--text); background:var(--panel-2); transform:translateY(-1px); }
+.bitcell.active{ background:var(--panel-3); color:var(--text); box-shadow:0 0 0 1.5px var(--c, var(--amber)) inset; }
+.bitcount{ display:block; font-size:9px; font-weight:500; color:var(--text-faint); margin-top:3px; }
+.field-detail{ min-height:56px; padding:11px 14px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; color:var(--text-dim); line-height:1.5; display:flex; align-items:center; }
+.field-detail b{ color:var(--text); font-family:var(--font-mono); }
+.field-legend{ display:flex; flex-wrap:wrap; gap:16px; }
+.field-legend .item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim); }
+.field-legend .sw{ width:12px; height:12px; border-radius:3px; }
+.bf-tabs{ display:flex; gap:6px; }
+.bf-tab{ font-family:var(--font-mono); font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:7px; background:var(--panel-2); border:1px solid var(--border-lt); color:var(--text-dim); transition:all .15s ease; }
+.bf-tab:hover{ color:var(--text); }
+.bf-tab.on{ background:var(--blue-dim); border-color:var(--blue); color:var(--blue); }
+
+/* ======================================================================
+   TRACE WINDOW (CANoe / CANalyzer style)
+   ====================================================================== */
+.trace-window{ background:#080a0e; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+.trace-bar{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--panel-2); border-bottom:1px solid var(--border); }
+.trace-bar .tdot{ width:9px; height:9px; border-radius:50%; }
+.trace-bar .tdot:nth-child(1){ background:#ff5f56; }
+.trace-bar .tdot:nth-child(2){ background:#ffbd2e; }
+.trace-bar .tdot:nth-child(3){ background:#27c93f; }
+.trace-bar .ttitle{ margin-left:6px; font-family:var(--font-mono); font-size:11px; color:var(--text-faint); }
+.trace-bar .tclear{ margin-left:auto; font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint); background:var(--panel-3); border:1px solid var(--border-lt); border-radius:5px; padding:3px 8px; }
+.trace-bar .tclear:hover{ color:var(--text); border-color:var(--red); }
+.trace-head, .trace-row{ display:grid; grid-template-columns:60px 40px 54px 92px 46px 30px 30px 1fr 92px; gap:6px; padding:5px 12px; align-items:center; }
+.trace-head{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); background:var(--panel-2); border-bottom:1px solid var(--border); }
+.trace-body{ flex:1; min-height:0; overflow-y:auto; font-family:var(--font-mono); font-size:11.5px; }
+.trace-row{ border-bottom:1px solid rgba(255,255,255,.03); animation:rowIn .3s ease; }
+@keyframes rowIn{ from{ opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;} }
+.trace-row .tc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-dim); }
+.trace-row.tx .tc.dir{ color:var(--blue); font-weight:700; }
+.trace-row.rx .tc.dir{ color:var(--green); font-weight:700; }
+.trace-row .tc.id{ color:var(--amber); font-weight:600; }
+.trace-row .tc.id .idtag{ font-size:9px; color:var(--text-faint); margin-left:4px; font-weight:600; }
+.trace-row .tc.data{ color:var(--text); }
+.trace-row.err{ background:rgba(255,123,114,.08); }
+.trace-row.err .tc{ color:var(--red); }
+.trace-row.err .tc.dir{ color:var(--red); font-weight:700; }
+.trace-empty{ padding:18px 14px; font-size:12px; color:var(--text-faint); font-style:italic; }
+
+/* ---- builder form ---- */
+.bform{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.bfield{ display:flex; flex-direction:column; gap:4px; }
+.bfield label{ font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint); }
+.bfield input[type=text], .bfield select{
+  background:var(--panel-2); border:1px solid var(--border-lt); border-radius:6px; color:var(--text);
+  font-family:var(--font-mono); font-size:12.5px; padding:7px 9px; min-width:70px;
+}
+.bfield input[type=text]:focus, .bfield select:focus{ outline:none; border-color:var(--blue); }
+.bfield.grow input{ width:100%; min-width:180px; }
+.bchk{ display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); padding-bottom:7px; }
+.bchk input{ accent-color:var(--blue); }
+.bbtn{ font-family:var(--font-mono); font-size:12.5px; font-weight:700; padding:9px 16px; border-radius:8px; border:1px solid; cursor:pointer; transition:all .15s ease; }
+.bbtn.tx{ background:var(--blue-dim); border-color:var(--blue); color:var(--blue); }
+.bbtn.tx:hover{ filter:brightness(1.2); }
+.bbtn.err{ background:var(--red-dim); border-color:var(--red); color:var(--red); font-size:11px; padding:7px 11px; }
+.bbtn.err:hover{ filter:brightness(1.2); }
+.bbtn.ghost{ background:var(--panel-2); border-color:var(--border-lt); color:var(--text-dim); font-size:11px; padding:7px 11px; }
+.bbtn.ghost:hover{ color:var(--text); border-color:var(--blue); }
+.bbtn.ghost.on{ background:var(--blue-dim); border-color:var(--blue); color:var(--blue); }
+.bbtn.mini{ font-size:10.5px; padding:6px 10px; }
+
+/* ---- error counters ---- */
+.gauge-row{ display:flex; align-items:center; gap:10px; }
+.gauge-label{ font-family:var(--font-mono); font-size:11px; color:var(--text-dim); width:64px; flex:none; }
+.gauge-track{ flex:1; height:14px; background:var(--panel-2); border-radius:7px; overflow:hidden; position:relative; border:1px solid var(--border-lt); }
+.gauge-fill{ height:100%; background:linear-gradient(90deg,var(--green),var(--amber),var(--red)); transition:width .3s ease; border-radius:7px 0 0 7px; }
+.gauge-mark{ position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,.35); }
+.gauge-val{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); width:40px; text-align:right; flex:none; }
+.state-pill{ font-family:var(--font-mono); font-size:12px; font-weight:800; padding:6px 14px; border-radius:20px; border:1.5px solid; letter-spacing:.03em; }
+.state-pill.active{ color:var(--green); border-color:var(--green); background:rgba(126,231,135,.08); }
+.state-pill.passive{ color:var(--amber); border-color:var(--amber); background:rgba(227,179,65,.08); }
+.state-pill.busoff{ color:var(--red); border-color:var(--red); background:rgba(255,123,114,.08); }
+
+/* ---- multiframe stepper ---- */
+.mf-strip{ display:flex; gap:6px; overflow-x:auto; padding:4px 2px 10px; }
+.mf-chip{ flex:none; min-width:54px; padding:9px 8px; border-radius:8px; border:1.5px solid var(--border-lt); background:var(--panel); text-align:center; font-family:var(--font-mono); cursor:pointer; transition:all .15s ease; }
+.mf-chip:hover{ transform:translateY(-2px); }
+.mf-chip .mf-t{ font-size:10.5px; font-weight:800; letter-spacing:.04em; }
+.mf-chip .mf-s{ font-size:9px; color:var(--text-faint); margin-top:2px; }
+.mf-chip.ff{ border-color:var(--blue-dim); } .mf-chip.ff .mf-t{ color:var(--blue); }
+.mf-chip.cf{ border-color:var(--green-dim); } .mf-chip.cf .mf-t{ color:var(--green); }
+.mf-chip.fc{ border-color:var(--amber-dim); } .mf-chip.fc .mf-t{ color:var(--amber); }
+.mf-chip.sf{ border-color:var(--violet-dim); } .mf-chip.sf .mf-t{ color:var(--violet); }
+.mf-chip.current{ box-shadow:0 0 0 2px var(--text) inset; transform:translateY(-2px); }
+.mf-chip.more{ color:var(--text-faint); border-style:dashed; }
+.step-caption{ font-size:13px; color:var(--text-dim); font-family:var(--font-mono); padding:9px 12px; background:var(--panel); border:1px solid var(--border); border-radius:7px; min-height:16px; line-height:1.5; }
+.step-caption b{ color:var(--amber); }
+.step-caption .g{ color:var(--green); } .step-caption .b{ color:var(--blue); } .step-caption .v{ color:var(--violet); } .step-caption .r{ color:var(--red); }
+.stepbar{ display:flex; align-items:center; gap:10px; }
+.step-btn{ font-family:var(--font-mono); font-size:12px; font-weight:600; background:var(--panel-2); border:1px solid var(--border-lt); color:var(--text-dim); padding:7px 13px; border-radius:7px; transition:all .2s ease; }
+.step-btn:hover{ border-color:var(--blue); color:var(--text); }
+.step-progress{ font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint); margin-left:auto; }
+
+/* ---- timing diagram ---- */
+.timeline-wrap{ position:relative; height:112px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px 16px; }
+.timeline-axis{ position:absolute; left:16px; right:16px; top:56px; height:2px; background:var(--border-lt); }
+.timeline-marker{ position:absolute; top:30px; width:2px; height:52px; background:var(--text-faint); }
+.timeline-marker .tm-label{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:10px; white-space:nowrap; color:var(--text-dim); }
+.timeline-marker .tm-sub{ position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:9px; white-space:nowrap; color:var(--text-faint); }
+.timeline-marker.tier1 .tm-label{ top:-36px; }
+.timeline-marker.tier1 .tm-sub{ bottom:-32px; }
+.timeline-marker.left-align .tm-label, .timeline-marker.left-align .tm-sub{ left:0; transform:none; }
+.timeline-marker.right-align .tm-label, .timeline-marker.right-align .tm-sub{ left:auto; right:0; transform:none; }
+.timeline-span{ position:absolute; top:44px; height:6px; border-radius:3px; }
+.timeline-scenarios{ display:flex; gap:8px; }
+
+/* ---- did table filter ---- */
+.did-search{ background:var(--panel-2); border:1px solid var(--border-lt); border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:12.5px; padding:8px 12px; width:260px; }
+.did-search:focus{ outline:none; border-color:var(--blue); }
+
+/* ---- suppress demo ---- */
+.sup-preview{ font-family:var(--font-mono); font-size:12.5px; line-height:1.8; }
+
+/* ======================================================================
+   QUIZ (reused pattern)
+   ====================================================================== */
+.quiz-app{ flex:1; min-height:0; display:flex; flex-direction:column; gap:14px; }
+.quiz-head{ display:flex; align-items:center; gap:16px; flex:none; }
+.quiz-badge{ font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:5px 11px; border-radius:20px; border:1px solid var(--border-lt); color:var(--text-dim); flex:none; }
+.quiz-badge.basic{ color:var(--blue); border-color:var(--blue); background:rgba(108,182,255,.08); }
+.quiz-badge.advanced{ color:var(--red); border-color:var(--red); background:rgba(255,123,114,.08); }
+.quiz-progress-wrap{ flex:1; display:flex; flex-direction:column; gap:5px; }
+.quiz-progress-label{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); display:flex; justify-content:space-between; }
+.quiz-progress-track{ height:6px; background:var(--panel-2); border-radius:3px; overflow:hidden; }
+.quiz-progress-fill{ height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); border-radius:3px; transition:width .3s ease; }
+.quiz-score{ font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--text); flex:none; background:var(--panel-2); border:1px solid var(--border-lt); border-radius:8px; padding:6px 13px; display:flex; align-items:center; gap:7px; }
+.quiz-score .dotstat-mini{ width:8px; height:8px; border-radius:50%; background:var(--green); }
+.quiz-body{ flex:1; min-height:0; display:flex; flex-direction:column; gap:14px; justify-content:center; }
+.quiz-topic{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; }
+.quiz-q{ font-size:19px; font-weight:600; color:var(--text); line-height:1.4; max-width:1000px; }
+.quiz-q code{ font-family:var(--font-mono); background:var(--panel-3); padding:1px 7px; border-radius:5px; font-size:.85em; color:var(--amber); }
+.quiz-choices{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.quiz-choice{ text-align:left; background:var(--panel); border:1.5px solid var(--border-lt); border-radius:10px; padding:12px 14px; font-size:13.5px; color:var(--text-dim); cursor:pointer; font-family:var(--font-sans); display:flex; align-items:center; gap:11px; transition:all .15s ease; line-height:1.4; }
+.quiz-choice:hover:not(.answered *){ border-color:var(--blue); color:var(--text); background:var(--panel-2); }
+.quiz-choice .qletter{ font-family:var(--font-mono); font-weight:700; font-size:11.5px; color:var(--text-faint); width:21px; height:21px; border-radius:50%; border:1.5px solid var(--border-lt); flex:none; display:flex; align-items:center; justify-content:center; }
+.quiz-choice .qdot{ width:9px; height:9px; border-radius:50%; flex:none; opacity:0; transition:opacity .15s ease; margin-left:auto; }
+.quiz-choices.answered .quiz-choice{ cursor:default; }
+.quiz-choices.answered .quiz-choice:not(.correct):not(.incorrect){ opacity:.45; }
+.quiz-choice.correct{ border-color:var(--green); background:rgba(126,231,135,.08); color:var(--text); }
+.quiz-choice.correct .qletter{ border-color:var(--green); color:var(--green); }
+.quiz-choice.correct .qdot{ opacity:1; background:var(--green); }
+.quiz-choice.incorrect{ border-color:var(--red); background:rgba(255,123,114,.08); color:var(--text); }
+.quiz-choice.incorrect .qletter{ border-color:var(--red); color:var(--red); }
+.quiz-choice.incorrect .qdot{ opacity:1; background:var(--red); }
+.quiz-explain{ background:var(--panel-2); border-left:3px solid var(--blue); border-radius:0 8px 8px 0; padding:11px 15px; font-size:12.8px; color:var(--text-dim); line-height:1.55; display:none; }
+.quiz-explain.show{ display:block; }
+.quiz-explain b{ color:var(--text); }
+.quiz-nav{ display:flex; justify-content:flex-end; flex:none; }
+.quiz-next-btn{ font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--ink); background:var(--green); border:none; border-radius:8px; padding:10px 20px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .15s ease; }
+.quiz-next-btn.show{ opacity:1; pointer-events:auto; }
+.quiz-next-btn:active{ transform:scale(.96); }
+.quiz-summary{ flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; }
+.quiz-summary-score{ font-family:var(--font-mono); font-size:56px; font-weight:800; color:var(--text); line-height:1; }
+.quiz-summary-score span{ font-size:24px; color:var(--text-faint); font-weight:600; }
+.quiz-summary-level{ font-family:var(--font-mono); font-size:13px; font-weight:700; padding:7px 16px; border-radius:20px; border:1.5px solid var(--green); color:var(--green); background:rgba(126,231,135,.08); }
+.quiz-summary-note{ max-width:640px; color:var(--text-dim); font-size:13.5px; line-height:1.6; }
+.quiz-summary-bars{ display:flex; gap:24px; }
+.quiz-summary-bar-item{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+.quiz-summary-bar-item .qb-label{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; }
+.quiz-summary-bar-item .qb-value{ font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--text); }
+.quiz-restart-btn{ font-family:var(--font-mono); font-size:12.5px; font-weight:600; color:var(--text-dim); background:var(--panel-2); border:1px solid var(--border-lt); border-radius:8px; padding:9px 18px; cursor:pointer; transition:all .15s ease; }
+.quiz-restart-btn:hover{ border-color:var(--blue); color:var(--text); }
+
+/* title slide */
+.title-slide{ position:relative; }
+.title-slide .glow{ position:absolute; width:640px; height:640px; border-radius:50%; background:radial-gradient(circle, rgba(108,182,255,.14), transparent 70%); top:-220px; right:-180px; pointer-events:none; }
+.title-wordmark{ font-family:var(--font-mono); font-weight:800; font-size:66px; letter-spacing:-0.02em; line-height:1; color:var(--text); }
+.title-wordmark .dot{ color:var(--amber); }
+.title-sub{ font-size:17px; color:var(--text-dim); max-width:660px; margin-top:12px; line-height:1.6; }
+.title-meta{ margin-top:auto; display:flex; gap:26px; font-family:var(--font-mono); font-size:12.5px; color:var(--text-faint); }
+.title-meta b{ color:var(--text-dim); font-weight:600; }
+.title-byline{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-faint); margin-top:14px; }
+.title-byline b{ color:var(--text-dim); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+
+  <main id="deck">
+
+    <!-- 1: TITLE -->
+    <section class="slide" data-section="start">
+      <div class="slide-inner center title-slide">
+        <div class="glow"></div>
+        <div class="title-wordmark">CAN<span class="dot">·</span>UDS</div>
+        <p class="title-sub">From the bit on the wire to the diagnostic service on top of it — Classical CAN and CAN FD frame structure, ISO-TP segmentation, and the UDS services an OTA / flashing engineer actually lives in.</p>
+        <div class="title-byline">ISO 11898 (CAN) · ISO 15765-2 (ISO-TP / diagnostics on CAN) · ISO 14229-1 (UDS)</div>
+        <div class="title-meta">
+          <span><b>→</b> / Space — advance</span>
+          <span><b>?</b> — shortcuts</span>
+          <span><b>G</b> — jump to slide</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2: CAN FUNDAMENTALS -->
+    <section class="slide" data-section="fundamentals">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow blue">Fundamentals</span>
+          <h1 class="title">CAN is a <span class="accent-blue">broadcast bus</span> that arbitrates on the fly</h1>
+          <h2 class="subtitle">Every node hears every frame. There's no master — the frame with the lowest ID always wins the wire, non-destructively, mid-transmission.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="stack">
+            <ul class="bullets">
+              <li><b>Differential signaling:</b> two wires, CAN_H / CAN_L. A <b>dominant</b> bit (logical 0) drives them apart; a <b>recessive</b> bit (logical 1) lets them float together. Dominant always wins a collision.</li>
+              <li><b>Multi-master:</b> any node can start transmitting once the bus is idle (recessive) — there's no bus arbiter granting turns.</li>
+              <li><b>CSMA/CR arbitration:</b> nodes transmit their ID bit-by-bit and simultaneously read the bus. The instant a node sends recessive but reads dominant, it lost — it backs off and retries later. Lower numeric ID = higher priority.</li>
+              <li><b>Non-destructive:</b> unlike Ethernet's CSMA/CD, nobody's frame gets corrupted by the collision — the losing node just stops cleanly at the arbitration field.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Why this matters for diagnostics</div>
+            <p class="lead">UDS request/response traffic rides on top of this exact mechanism. A tester's diagnostic request is just another CAN frame competing for the bus — usually given a high-priority (numerically low) arbitration ID so it doesn't get starved behind high-rate sensor traffic.</p>
+            <p class="lead" style="margin-top:10px;">Everything from here — frame layout, error handling, ISO-TP segmentation, UDS services — sits on top of this one arbitration rule.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3: CLASSICAL VS FD -->
+    <section class="slide" data-section="fundamentals">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow blue">Fundamentals</span>
+          <h1 class="title">Classical CAN vs. <span class="accent-green">CAN FD</span></h1>
+          <h2 class="subtitle">FD (Flexible Data-rate) keeps the same arbitration mechanism and IDs — it only changes what happens to the data phase once arbitration is won.</h2>
+        </div>
+        <div class="panel grow scroll-y">
+          <table class="cmp">
+            <tr><th></th><th>Classical CAN (2.0A/2.0B)</th><th>CAN FD</th></tr>
+            <tr><td class="hl">Max data payload</td><td>8 bytes</td><td>64 bytes</td></tr>
+            <tr><td class="hl">DLC field</td><td>4 bits, values 0–8 map 1:1 to byte count (9–15 also mean 8 bytes)</td><td>4 bits, values 9–15 are an <b>escape code</b>: 9=12, 10=16, 11=20, 12=24, 13=32, 14=48, 15=64 bytes</td></tr>
+            <tr><td class="hl">Arbitration bit rate</td><td>Single rate for the whole frame (typ. 500 kbit/s)</td><td>Same nominal rate through arbitration</td></tr>
+            <tr><td class="hl">Data bit rate</td><td>Same as arbitration — no switch</td><td>Optional <b>Bit Rate Switch (BRS)</b> — data phase can run 2–8× faster (typ. 2 Mbit/s), then drops back before CRC delimiter</td></tr>
+            <tr><td class="hl">Remote frames</td><td>Supported (RTR=1, no data)</td><td>Not supported — FD has no remote-frame concept, that bit is repurposed</td></tr>
+            <tr><td class="hl">CRC</td><td>15-bit</td><td>17-bit (frames ≤16 bytes) or 21-bit (frames &gt;16 bytes), plus a stuff-bit counter for robustness at the faster rate</td></tr>
+            <tr><td class="hl">Error state signaling</td><td>Not present</td><td><b>ESI</b> bit — transmitter tells the bus whether it's currently Error Active or Error Passive</td></tr>
+            <tr><td class="hl">Arbitration IDs (11-bit / 29-bit)</td><td colspan="2">Identical mechanism in both — see the <i>Extended Addressing</i> slide. FD does not change how IDs are formed.</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4: CLASSICAL FRAME BIT VIEW -->
+    <section class="slide" data-section="frame structure" data-title="Classical CAN frame layout">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Frame structure</span>
+          <h1 class="title">Classical CAN — field by field</h1>
+          <h2 class="subtitle">Click any field to see exactly what it encodes. Toggle Standard (11-bit) / Extended (29-bit) — the rest of the frame is identical either way.</h2>
+        </div>
+        <div class="bf-tabs" data-group="classical">
+          <button class="bf-tab on" data-target="bfClassicalStd">Standard · 11-bit ID</button>
+          <button class="bf-tab" data-target="bfClassicalExt">Extended · 29-bit ID</button>
+        </div>
+        <div class="bitfield" id="bfClassicalStd" data-group="classical">
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>SOF</b> — Start Of Frame. One dominant bit. Every node on an idle (recessive) bus watches for this to know a new frame is starting.">SOF<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:11;--c:var(--blue)" data-desc="<b>Identifier[10:0]</b> — 11-bit arbitration ID. Sent MSB-first; the node sending the numerically lowest ID wins arbitration and keeps transmitting. This is the field your DBC / trace tool shows as the CAN ID.">ID[10:0]<span class="bitcount">11 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="<b>RTR</b> — Remote Transmission Request. Dominant (0) = normal data frame. Recessive (1) = a remote frame requesting the node that owns this ID to send its data — rarely used in modern designs, and not present at all in CAN FD.">RTR<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="<b>IDE</b> — Identifier Extension. Dominant (0) here means this is a Standard (11-bit) frame. If IDE were recessive (1), everything after it is interpreted as an Extended frame — see the Extended tab.">IDE<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>r0</b> — reserved bit, sent dominant. Must be ignored on receive for compatibility with future revisions. In CAN FD this exact bit position becomes <b>FDF</b>.">r0<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:4;--c:var(--amber)" data-desc="<b>DLC</b> — Data Length Code, 4 bits. Values 0–8 map 1:1 to the number of data bytes. Values 9–15 are technically valid on the wire but all mean '8 bytes' in Classical CAN — they exist for compatibility, not to encode more length.">DLC<span class="bitcount">4 bits</span></div>
+          <div class="bitcell" style="--w:16;--c:var(--border-lt)" data-desc="<b>Data field</b> — 0 to 8 bytes, whatever DLC says. This is the payload every higher layer (ISO-TP, UDS, application signals) is built on top of.">DATA<span class="bitcount">0–8 bytes</span></div>
+          <div class="bitcell" style="--w:15;--c:var(--blue)" data-desc="<b>CRC</b> — 15-bit checksum computed over SOF + arbitration + control + data fields, using the CAN CRC polynomial. Every receiver recomputes it and compares; a mismatch triggers a CRC Error.">CRC<span class="bitcount">15 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--blue)" data-desc="<b>CRC delimiter</b> — 1 fixed recessive bit separating the CRC from the ACK field. A dominant bit here is a Form Error.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="<b>ACK slot</b> — the transmitter sends this recessive, and <i>any</i> other node that received the frame correctly (regardless of whether the ID is 'theirs') overwrites it with a dominant bit. If it stays recessive, the transmitter knows nobody heard it — an ACK Error.">ACK<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="<b>ACK delimiter</b> — 1 fixed recessive bit closing the ACK field.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:7;--c:var(--text-faint)" data-desc="<b>EOF</b> — End Of Frame. 7 recessive bits. This is deliberately the one place 5 identical bits in a row are allowed without stuffing — it's how everyone recognizes 'frame's over.'">EOF<span class="bitcount">7 bits</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--text-faint)" data-desc="<b>IFS</b> — Inter-Frame Space. 3 recessive bits of bus-idle before the next frame may start.">IFS<span class="bitcount">3 bits</span></div>
+        </div>
+        <div class="bitfield" id="bfClassicalExt" data-group="classical" style="display:none;">
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>SOF</b> — identical role to the Standard frame.">SOF<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:11;--c:var(--blue)" data-desc="<b>ID[28:18]</b> — the 11 most-significant bits of the 29-bit identifier (the 'base ID'). On the wire this looks exactly like a Standard ID, which is what lets SRR sit where RTR used to.">ID[28:18]<span class="bitcount">11 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="<b>SRR</b> — Substitute Remote Request. Always sent recessive; it exists purely to occupy the bit position RTR held in a Standard frame, so arbitration between a Standard and an Extended frame sharing the same base ID stays well-defined (Standard wins, since its RTR would be dominant for a data frame).">SRR<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="<b>IDE</b> — sent <b>recessive (1)</b> here — this is the bit that tells every receiver 'the next 18 bits are more identifier, not control field.' Same physical bit position as in the Standard frame.">IDE=1<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:18;--c:var(--blue)" data-desc="<b>ID[17:0]</b> — the 18 least-significant bits of the identifier. Combined with ID[28:18] this gives the full 29-bit extended arbitration ID (0x00000000–0x1FFFFFFF).">ID[17:0]<span class="bitcount">18 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="<b>RTR</b> — now appears after the full 29-bit ID; same meaning as in the Standard frame.">RTR<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>r1</b> — reserved, dominant.">r1<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>r0</b> — reserved, dominant. In CAN FD this becomes FDF, same as the Standard frame.">r0<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:4;--c:var(--amber)" data-desc="<b>DLC</b> — identical meaning to the Standard frame.">DLC<span class="bitcount">4 bits</span></div>
+          <div class="bitcell" style="--w:16;--c:var(--border-lt)" data-desc="<b>Data field</b> — identical to the Standard frame, 0–8 bytes.">DATA<span class="bitcount">0–8 bytes</span></div>
+          <div class="bitcell" style="--w:15;--c:var(--blue)" data-desc="<b>CRC</b> — identical mechanism; now covers the longer arbitration field too.">CRC<span class="bitcount">15 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--blue)" data-desc="CRC delimiter.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="ACK slot — identical mechanism to the Standard frame.">ACK<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="ACK delimiter.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:7;--c:var(--text-faint)" data-desc="EOF — identical to the Standard frame.">EOF<span class="bitcount">7 bits</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--text-faint)" data-desc="IFS — identical to the Standard frame.">IFS<span class="bitcount">3 bits</span></div>
+        </div>
+        <div class="field-detail" data-for="classical">Click a field above — start with <b>SOF</b>.</div>
+        <div class="field-legend">
+          <div class="item"><span class="sw" style="background:var(--blue)"></span>Identifier / CRC</div>
+          <div class="item"><span class="sw" style="background:var(--amber)"></span>Control / length</div>
+          <div class="item"><span class="sw" style="background:var(--violet)"></span>Frame-type bit</div>
+          <div class="item"><span class="sw" style="background:var(--green)"></span>Acknowledgement</div>
+          <div class="item"><span class="sw" style="background:var(--text-faint)"></span>Fixed / reserved</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: FD FRAME BIT VIEW -->
+    <section class="slide" data-section="frame structure" data-title="CAN FD frame layout">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Frame structure</span>
+          <h1 class="title">CAN FD — the same skeleton, a richer control field</h1>
+          <h2 class="subtitle">Arbitration is untouched. Everything new lives between IDE and DLC — that's where FD announces itself and negotiates a faster data phase.</h2>
+        </div>
+        <div class="bf-tabs" data-group="fd">
+          <button class="bf-tab on" data-target="bfFDStd">Standard · 11-bit ID</button>
+          <button class="bf-tab" data-target="bfFDExt">Extended · 29-bit ID</button>
+        </div>
+        <div class="bitfield" id="bfFDStd" data-group="fd">
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>SOF</b> — same as Classical CAN.">SOF<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:11;--c:var(--blue)" data-desc="<b>ID[10:0]</b> — same 11-bit arbitration ID, same arbitration rule. A Classical and an FD node contend for the bus exactly the same way.">ID[10:0]<span class="bitcount">11 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="<b>RRS</b> — Remote Request Substitute. Occupies the RTR bit position but is always sent dominant, because <b>FD has no remote frames</b>. It exists so an FD frame still arbitrates cleanly against a Classical remote frame sharing the same ID.">RRS<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="<b>IDE</b> — same role as Classical CAN: dominant = Standard ID.">IDE<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="<b>FDF</b> — FD Format indicator. This is the old 'r0' reserved bit, now sent <b>recessive</b> to say 'this is a CAN FD frame.' A Classical-only receiver that doesn't understand FD sees a reserved bit set and knows to treat the frame as an error/ignore it — this is the single bit that fans out into everything else on this slide.">FDF=1<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="<b>res</b> — reserved, sent dominant.">res<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="<b>BRS</b> — Bit Rate Switch. Recessive = the data field (and CRC) will be transmitted at the faster data-phase bit rate (commonly 2 Mbit/s vs. a 500 kbit/s arbitration rate), switching back to the nominal rate before the CRC delimiter. Dominant = stay at the nominal rate for the whole frame.">BRS<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--red)" data-desc="<b>ESI</b> — Error State Indicator. The <i>transmitter</i> sets this to tell the bus its own fault-confinement state: dominant = Error Active, recessive = Error Passive. Unique to FD — Classical CAN has no way for a node to broadcast its own health.">ESI<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:4;--c:var(--amber)" data-desc="<b>DLC</b> — same 4 bits, different decode table. 0–8 still mean 0–8 bytes, but 9–15 are now a real escape code: 9=12, 10=16, 11=20, 12=24, 13=32, 14=48, 15=64 bytes. See the Nibble &amp; Byte slide for the full table.">DLC<span class="bitcount">4 bits</span></div>
+          <div class="bitcell" style="--w:18;--c:var(--border-lt)" data-desc="<b>Data field</b> — 0 to 64 bytes. This is the headline FD improvement: 8× the payload of Classical CAN in one frame.">DATA<span class="bitcount">0–64 bytes</span></div>
+          <div class="bitcell" style="--w:17;--c:var(--blue)" data-desc="<b>CRC + stuff count</b> — 17-bit CRC for frames ≤16 bytes, 21-bit CRC for longer frames, prefixed by a 4-bit stuff-bit counter (with parity) so a corrupted stuff bit can't silently desync the CRC check the way it theoretically could in Classical CAN. FD also uses <i>fixed</i> stuff bits every 4 bits through this field instead of the normal 5-in-a-row rule, specifically to close that gap.">CRC<span class="bitcount">17/21 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--blue)" data-desc="CRC delimiter — the bus switches back to the nominal (arbitration) bit rate at this point if BRS was set.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--green)" data-desc="<b>ACK field</b> — 2 bits in FD (ACK slot + a second dominant confirmation bit) instead of Classical's 1, to make the acknowledgement robust across the rate switch back to nominal speed, followed by the ACK delimiter.">ACK<span class="bitcount">2 bits</span></div>
+          <div class="bitcell" style="--w:7;--c:var(--text-faint)" data-desc="EOF — same role as Classical CAN, 7 recessive bits.">EOF<span class="bitcount">7 bits</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--text-faint)" data-desc="IFS — same role as Classical CAN.">IFS<span class="bitcount">3 bits</span></div>
+        </div>
+        <div class="bitfield" id="bfFDExt" data-group="fd" style="display:none;">
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="SOF.">SOF<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:11;--c:var(--blue)" data-desc="ID[28:18] — base ID, identical to Classical Extended.">ID[28:18]<span class="bitcount">11 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="SRR — same substitute-request role as Classical Extended, always recessive.">SRR<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="IDE=1 — signals an extended 29-bit ID, exactly as in Classical CAN.">IDE=1<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:18;--c:var(--blue)" data-desc="ID[17:0] — ID extension, identical mechanism to Classical Extended. Extended addressing itself is completely unchanged by FD.">ID[17:0]<span class="bitcount">18 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="RRS — dominant, no remote frames in FD.">RRS<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--violet)" data-desc="FDF=1 — announces FD format, same bit position idea as the Standard FD frame.">FDF=1<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--text-faint)" data-desc="res — reserved, dominant.">res<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="BRS — same bit-rate switch semantics as the Standard FD frame.">BRS<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--red)" data-desc="ESI — same transmitter health flag as the Standard FD frame.">ESI<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:4;--c:var(--amber)" data-desc="DLC — same escape-coded length table.">DLC<span class="bitcount">4 bits</span></div>
+          <div class="bitcell" style="--w:18;--c:var(--border-lt)" data-desc="Data field — 0–64 bytes.">DATA<span class="bitcount">0–64 bytes</span></div>
+          <div class="bitcell" style="--w:17;--c:var(--blue)" data-desc="CRC + stuff count — same as the Standard FD frame, now covering the longer arbitration field.">CRC<span class="bitcount">17/21 bits</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--blue)" data-desc="CRC delimiter.">DEL<span class="bitcount">1 bit</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--green)" data-desc="ACK field — 2 bits, same as the Standard FD frame.">ACK<span class="bitcount">2 bits</span></div>
+          <div class="bitcell" style="--w:7;--c:var(--text-faint)" data-desc="EOF.">EOF<span class="bitcount">7 bits</span></div>
+          <div class="bitcell" style="--w:3;--c:var(--text-faint)" data-desc="IFS.">IFS<span class="bitcount">3 bits</span></div>
+        </div>
+        <div class="field-detail" data-for="fd">Click a field above — start with <b>FDF</b>, the bit that makes everything else here possible.</div>
+        <div class="field-legend">
+          <div class="item"><span class="sw" style="background:var(--blue)"></span>Identifier / CRC</div>
+          <div class="item"><span class="sw" style="background:var(--amber)"></span>Control / length</div>
+          <div class="item"><span class="sw" style="background:var(--violet)"></span>Frame-type bit</div>
+          <div class="item"><span class="sw" style="background:var(--green)"></span>Rate switch / ACK</div>
+          <div class="item"><span class="sw" style="background:var(--red)"></span>Error-state signal</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6: NIBBLE / BYTE DEFINITIONS -->
+    <section class="slide" data-section="frame structure" data-title="Nibble & byte definitions">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Frame structure</span>
+          <h1 class="title">Reading DLC and ID in nibbles &amp; bytes</h1>
+          <h2 class="subtitle">Two tables worth memorizing: what DLC actually means on each bus, and how the arbitration ID's nibbles map to what a trace tool shows you.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>DLC → byte count</div>
+            <table class="cmp">
+              <tr><th>DLC (hex)</th><th>Classical CAN</th><th>CAN FD</th></tr>
+              <tr><td class="hl"><code>0–8</code></td><td>0–8 bytes (1:1)</td><td>0–8 bytes (1:1, identical)</td></tr>
+              <tr><td class="hl"><code>9</code></td><td>8 bytes (no more room)</td><td><b>12</b> bytes</td></tr>
+              <tr><td class="hl"><code>A</code></td><td>8 bytes</td><td><b>16</b> bytes</td></tr>
+              <tr><td class="hl"><code>B</code></td><td>8 bytes</td><td><b>20</b> bytes</td></tr>
+              <tr><td class="hl"><code>C</code></td><td>8 bytes</td><td><b>24</b> bytes</td></tr>
+              <tr><td class="hl"><code>D</code></td><td>8 bytes</td><td><b>32</b> bytes</td></tr>
+              <tr><td class="hl"><code>E</code></td><td>8 bytes</td><td><b>48</b> bytes</td></tr>
+              <tr><td class="hl"><code>F</code></td><td>8 bytes</td><td><b>64</b> bytes</td></tr>
+            </table>
+            <p class="footnote" style="margin-top:8px;">On CAN FD only these 8 physical frame lengths exist — <code>{0..8,12,16,20,24,32,48,64}</code>. There is no 9-, 13- or 40-byte frame; a payload of, say, 30 bytes still goes out in a 32-byte frame with the extra bytes padded (commonly <code>0xCC</code> or <code>0xAA</code>, tool/OEM-dependent).</p>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Arbitration ID nibbles, as a trace tool shows them</div>
+            <table class="cmp">
+              <tr><th>Notation</th><th>Bits</th><th>Hex width</th><th>Range</th></tr>
+              <tr><td class="hl">Standard (11-bit)</td><td>ID[10:0]</td><td>3 hex digits (top nibble only uses 3 bits)</td><td><code>0x000</code>–<code>0x7FF</code></td></tr>
+              <tr><td class="hl">Extended (29-bit)</td><td>ID[28:0]</td><td>8 hex digits (top nibble only uses 5 bits)</td><td><code>0x00000000</code>–<code>0x1FFFFFFF</code></td></tr>
+            </table>
+            <p class="lead" style="margin-top:10px;">A trace tool prints the ID as one hex number — it doesn't show SOF/SRR/IDE/RTR as separate columns. The nibble boundaries above are exactly why: 11 bits round up to 3 hex digits (12 bits of room, top bit unused), 29 bits round up to 8 hex digits (32 bits of room, top 3 bits unused).</p>
+            <p class="lead" style="margin-top:8px;">First data byte in a diagnostic (UDS-over-ISO-TP) frame is special too: its top nibble is the ISO-TP PCI type (<code>0</code>=SF, <code>1</code>=FF, <code>2</code>=CF, <code>3</code>=FC) — covered in the ISO-TP section.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7: EXTENDED ADDRESSING -->
+    <section class="slide" data-section="frame structure" data-title="Extended addressing (11-bit vs 29-bit)">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Frame structure</span>
+          <h1 class="title">Extended addressing — identical in Classical CAN and FD</h1>
+          <h2 class="subtitle">One bit, <code>IDE</code>, decides everything. Its position on the wire never moves, whether the frame is Classical or FD — FD only adds fields <i>after</i> the identifier is already fully formed.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>What <code>IDE</code> does</div>
+              <ul class="bullets compact">
+                <li><b>IDE = 0 (dominant):</b> Standard frame. The 11 bits already sent are the whole identifier; DLC comes right after.</li>
+                <li><b>IDE = 1 (recessive):</b> Extended frame. What looked like an 11-bit ID was only the <i>base</i> — 18 more identifier bits follow before DLC.</li>
+                <li>Because Standard's <code>RTR</code> and Extended's <code>SRR</code> occupy the exact same bit position, a Standard frame and an Extended frame that happen to share the same base 11 bits still arbitrate deterministically: RTR=0 (dominant, data frame) always beats SRR=1 (recessive) at that bit.</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--green)"></span>What changes on CAN FD — nothing, here</div>
+              <p class="lead">FD reuses the arbitration field byte-for-byte. <code>FDF</code>, <code>BRS</code>, <code>ESI</code> and the new DLC decode table all live strictly <i>after</i> <code>IDE</code>/<code>SRR</code>/<code>RRS</code>. A CAN FD 29-bit frame is formed by taking the Classical Extended arbitration field and appending the FD control bits — the ID logic itself is untouched. See the earlier bit-view slides to click through both full layouts.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Standard vs. Extended, side by side</div>
+            <table class="cmp">
+              <tr><th></th><th>Standard</th><th>Extended</th></tr>
+              <tr><td class="hl">ID width</td><td>11 bits</td><td>29 bits (11 base + 18 extension)</td></tr>
+              <tr><td class="hl">IDE bit</td><td>0 (dominant)</td><td>1 (recessive)</td></tr>
+              <tr><td class="hl">Bit after base 11 bits</td><td><code>RTR</code></td><td><code>SRR</code> (always recessive placeholder)</td></tr>
+              <tr><td class="hl">Typical use</td><td>Most OEM powertrain/chassis/body signal frames</td><td>J1939 (SAE trucking), some OBD/UDS functional addressing schemes, large fleets of similar IDs</td></tr>
+              <tr><td class="hl">Same on Classical &amp; FD?</td><td colspan="2" class="hl" style="color:var(--green)">Yes — byte-identical mechanism on both bus types.</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8: BIT STUFFING -->
+    <section class="slide" data-section="frame structure" data-title="Bit stuffing & frame integrity">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow red">Frame structure → errors</span>
+          <h1 class="title">Bit stuffing keeps every node's clock in sync</h1>
+          <h2 class="subtitle">CAN has no separate clock wire — receivers resynchronize on every edge. A long run of identical bits would starve them of edges, so the transmitter inserts artificial ones.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--red)"></span>The rule</div>
+              <p class="lead">After <b>5 consecutive bits of the same polarity</b> (5 dominant or 5 recessive in a row), the transmitter inserts one bit of the opposite polarity. Every receiver knows the rule too, so it silently removes that bit before interpreting the data — it's invisible above this layer.</p>
+              <p class="lead" style="margin-top:8px;">Stuffing applies from SOF through the end of the CRC field. <b>EOF is deliberately exempt</b> — its 7 recessive bits are how everyone agrees the frame just ended.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Why it doubles as error detection</div>
+              <p class="lead">If a receiver ever sees a 6th identical bit where stuffing should have broken the run, that's not noise it can shrug off — it's a guaranteed protocol violation. That's exactly the <b>Stuff Error</b> covered on the next slide.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--green)"></span>CAN FD's extra safeguard</div>
+            <p class="lead">At FD's faster data-phase rate, mis-counting stuff bits during the CRC field would be more damaging (a single lost/gained bit could still pass a coincidentally-matching CRC on a long frame). So FD switches strategy inside the CRC field specifically:</p>
+            <ul class="bullets compact" style="margin-top:8px;">
+              <li><b>Fixed stuff bits:</b> instead of "after 5 identical bits," FD inserts one stuff bit every 4 bits through the CRC field, regardless of polarity.</li>
+              <li><b>Stuff count field:</b> a 3-bit counter (plus parity) at the start of the CRC field tells the receiver exactly how many stuff bits it should have removed — a second, independent check on top of the CRC itself.</li>
+            </ul>
+            <p class="footnote" style="margin-top:10px;">Net effect: FD's CRC field is more robust per bit than Classical's, which matters more as the data field — and therefore the CRC computation — got a lot longer.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9: FRAME BUILDER + TRACE -->
+    <section class="slide" data-section="canoe / canalyzer" data-title="Interactive frame transmission">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow green">Hands-on · CANoe / CANalyzer style</span>
+          <h1 class="title">Build a frame, watch it hit the trace</h1>
+          <h2 class="subtitle">The same fields a CANoe/CANalyzer panel gives you — arbitration ID, bus type, DLC, data — feeding a live trace window like the one you'd read a real bus capture from.</h2>
+        </div>
+        <div class="cols c2-narrow" style="flex:1;min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--green)"></span>Frame parameters</div>
+              <div class="bform">
+                <div class="bfield"><label>Bus</label><select id="fbBus"><option value="classical">Classical CAN</option><option value="fd">CAN FD</option></select></div>
+                <div class="bfield"><label>ID type</label><select id="fbIdType"><option value="std">Standard 11b</option><option value="ext">Extended 29b</option></select></div>
+                <div class="bfield"><label>Arb. ID (hex)</label><input type="text" id="fbId" value="7E0"></div>
+                <div class="bchk"><input type="checkbox" id="fbRtr"><label for="fbRtr">RTR</label></div>
+                <div class="bfield"><label>DLC → bytes</label><select id="fbDlc"></select></div>
+                <div class="bfield grow"><label>Data (hex bytes)</label><input type="text" id="fbData" value="02 10 03 00 00 00 00 00"></div>
+                <div class="bchk"><input type="checkbox" id="fbBrs"><label for="fbBrs">BRS</label></div>
+                <div class="bchk"><input type="checkbox" id="fbEsi"><label for="fbEsi">ESI</label></div>
+                <div class="bfield"><label>Direction</label><select id="fbDir"><option value="Tx">Tx (tester)</option><option value="Rx">Rx (ECU)</option></select></div>
+                <button class="bbtn tx" id="fbSend">▶ Transmit</button>
+              </div>
+              <p class="footnote" style="margin-top:8px;">Default payload shown is a UDS <code>10 03</code> Extended Session request, padded to 8 bytes — try changing Direction to Rx and sending <code>06 50 03 00 32 01 F4</code> back as the ECU's positive response.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title">Trace columns, decoded</div>
+              <ul class="bullets compact">
+                <li><b>Time</b> — seconds since capture start (illustrative here; a real tool timestamps in µs).</li>
+                <li><b>Dir</b> — <code>Tx</code> from the tester/tool, <code>Rx</code> as heard from the bus (an ECU's response).</li>
+                <li><b>ID / Type</b> — arbitration ID plus <code>STD</code>/<code>EXT</code>, exactly as covered on the bit-layout slides.</li>
+                <li><b>DLC / Len</b> — the raw 4-bit code, then the actual byte count it decodes to (see the DLC table).</li>
+              </ul>
+            </div>
+          </div>
+          <div class="trace-window" style="height:100%;">
+            <div class="trace-bar"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span><span class="ttitle">Trace 1 — CAN1 / CAN-FD1</span><button class="tclear" id="fbClear">clear</button></div>
+            <div class="trace-head"><span>Time</span><span>Dir</span><span>Bus</span><span>ID</span><span>Type</span><span>DLC</span><span>Len</span><span>Data</span><span>Flags</span></div>
+            <div class="trace-body" id="fbTraceBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: ERROR FRAMES + FAULT CONFINEMENT -->
+    <section class="slide" data-section="canoe / canalyzer" data-title="Error frames & fault confinement">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow red">Error handling · CANoe / CANalyzer</span>
+          <h1 class="title">Five ways a frame gets rejected — and what it costs the node</h1>
+          <h2 class="subtitle">Every receiver polices every frame. The moment one of these five conditions is seen, the detecting node stomps an Error Frame onto the bus mid-transmission.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--red)"></span>The five error types</div>
+              <table class="cmp">
+                <tr><th>Error</th><th>Detected by</th><th>Trigger</th></tr>
+                <tr><td class="hl">Bit</td><td>Transmitter</td><td>Sent one polarity, read back the other (outside arbitration/ACK)</td></tr>
+                <tr><td class="hl">Stuff</td><td>Any receiver</td><td>6th identical bit in a row where a stuff bit was required</td></tr>
+                <tr><td class="hl">CRC</td><td>Any receiver</td><td>Recomputed CRC ≠ transmitted CRC field</td></tr>
+                <tr><td class="hl">Form</td><td>Any receiver</td><td>A fixed-format bit (delimiter/EOF) sampled at an illegal value</td></tr>
+                <tr><td class="hl">ACK</td><td>Transmitter</td><td>ACK slot stayed recessive — nobody acknowledged</td></tr>
+              </table>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>The Error Frame itself</div>
+              <div class="bitfield" style="max-width:420px;">
+                <div class="bitcell" style="--w:6;--c:var(--red)">Error Flag<span class="bitcount">6 bits</span></div>
+                <div class="bitcell" style="--w:8;--c:var(--text-faint)">Error Delimiter<span class="bitcount">8 recessive</span></div>
+              </div>
+              <p class="lead" style="margin-top:9px;"><b>Active</b> nodes send 6 <b>dominant</b> bits — this deliberately violates stuffing, so every other node also detects an error and joins in ("error contagion"), guaranteeing the whole bus agrees the frame is dead. <b>Passive</b> nodes send 6 <b>recessive</b> bits instead — quiet enough not to disturb a bus that's already fine, which is exactly the restraint an Error-Passive node is supposed to show. The original transmitter automatically re-arbitrates and retransmits once the bus is idle again.</p>
+            </div>
+          </div>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--green)"></span>Fault confinement — inject errors, watch the state change</div>
+            <div class="row" style="gap:16px;">
+              <div class="gauge-row" style="flex:1;"><span class="gauge-label">TEC</span><div class="gauge-track"><div class="gauge-fill" id="erTecFill" style="width:0%"></div><div class="gauge-mark" style="left:50.2%"></div><div class="gauge-mark" style="left:100%"></div></div><span class="gauge-val" id="erTecVal">0</span></div>
+            </div>
+            <div class="row" style="gap:16px; margin-top:4px;">
+              <div class="gauge-row" style="flex:1;"><span class="gauge-label">REC</span><div class="gauge-track"><div class="gauge-fill" id="erRecFill" style="width:0%"></div><div class="gauge-mark" style="left:50.2%"></div><div class="gauge-mark" style="left:100%"></div></div><span class="gauge-val" id="erRecVal">0</span></div>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="state-pill active" id="erState">ERROR ACTIVE</span>
+              <span class="footnote">markers at 128 (Passive) and 256 (Bus-Off, TEC only)</span>
+            </div>
+            <div class="bform" style="margin-top:10px;">
+              <div class="bfield"><label>Role</label><select id="erRole"><option value="tx">Transmitting</option><option value="rx">Receiving</option></select></div>
+              <div class="bfield"><label>ID (hex)</label><input type="text" id="erId" value="7E8" style="width:70px;"></div>
+              <button class="bbtn err erErrBtn" data-cause="bit">Bit Error</button>
+              <button class="bbtn err erErrBtn" data-cause="stuff">Stuff Error</button>
+              <button class="bbtn err erErrBtn" data-cause="crc">CRC Error</button>
+              <button class="bbtn err erErrBtn" data-cause="form">Form Error</button>
+              <button class="bbtn err erErrBtn" data-cause="ack">ACK Error</button>
+              <button class="bbtn ghost" id="erGood">✓ Successful frame</button>
+              <button class="bbtn ghost" id="erReset">⟲ Reset</button>
+            </div>
+            <div class="trace-window grow" style="margin-top:10px;">
+              <div class="trace-head"><span>Time</span><span>Dir</span><span>Bus</span><span>ID</span><span>Type</span><span>DLC</span><span>Len</span><span>Detail</span><span>Flags</span></div>
+              <div class="trace-body" id="erTraceBody"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11: ISO-TP OVERVIEW / N_PCI -->
+    <section class="slide" data-section="iso-tp / multiframe" data-title="ISO-TP overview & N_PCI types">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">ISO-TP · ISO 15765-2</span>
+          <h1 class="title">One CAN frame isn't enough — ISO-TP segments the rest</h1>
+          <h2 class="subtitle">UDS payloads routinely exceed a single CAN frame's data field. ISO-TP's job is purely to chop a message up on the way out and reassemble it on the way in — four frame types, told apart by the first nibble of byte 0 (the <b>N_PCI</b>).</h2>
+        </div>
+        <div class="bf-tabs" data-group="isotp">
+          <button class="bf-tab on" data-target="bfSF">0x0 · Single Frame</button>
+          <button class="bf-tab" data-target="bfFF">0x1 · First Frame</button>
+          <button class="bf-tab" data-target="bfCF">0x2 · Consecutive Frame</button>
+          <button class="bf-tab" data-target="bfFC">0x3 · Flow Control</button>
+        </div>
+        <div class="bitfield" id="bfSF" data-group="isotp">
+          <div class="bitcell" style="--w:1;--c:var(--violet)" data-desc="<b>PCI type = 0x0</b> — high nibble of byte 0. Tells the receiver this whole message fits in one CAN frame.">0x0<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:1;--c:var(--amber)" data-desc="<b>SF_DL</b> — low nibble of byte 0, 0–7 on Classical CAN. This is the number of data bytes that follow — deliberately capped so the whole thing (1 PCI byte + up to 7 data bytes) still fits an 8-byte Classical frame.">SF_DL<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data bytes 1–7 (however many SF_DL says). Any unused trailing bytes are padded.">Data<span class="bitcount">≤7 B</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+        </div>
+        <div class="bitfield" id="bfFF" data-group="isotp" style="display:none;">
+          <div class="bitcell" style="--w:1;--c:var(--violet)" data-desc="<b>PCI type = 0x1</b> — this message needs segmentation; here's the first chunk.">0x1<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:1;--c:var(--amber)" data-desc="<b>FF_DL[11:8]</b> — high 4 bits of a 12-bit total-length field (so FF_DL up to 4095 bytes). Together with byte 1 the receiver learns the <i>entire</i> message length before any Consecutive Frame arrives.">DL hi<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--amber)" data-desc="<b>FF_DL[7:0]</b> — low 8 bits of the total length. If FF_DL would need to be 0 (i.e. both length bytes are 0x00), that's the escape for messages &gt;4095 bytes: 4 more length bytes follow instead of data — vanishingly rare in UDS.">DL lo<span class="bitcount">byte</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="First data byte of the message (Classical: 6 data bytes fit in the FF; CAN FD: up to 62).">Data<span class="bitcount">6B (Cl.)</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte — last one that fits an 8-byte Classical frame.">Data</div>
+        </div>
+        <div class="bitfield" id="bfCF" data-group="isotp" style="display:none;">
+          <div class="bitcell" style="--w:1;--c:var(--violet)" data-desc="<b>PCI type = 0x2</b> — one of the follow-up chunks of a segmented message.">0x2<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:1;--c:var(--amber)" data-desc="<b>SN</b> — Sequence Number, 0–15. The first Consecutive Frame after a First Frame is always <code>SN=1</code>, then it increments and <b>wraps 1→2→…→15→0→1…</b>. This is how the receiver detects a dropped or duplicated CF — it's not related to the UDS TransferData block counter, which is a completely separate number (see the 0x36 slide).">SN<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte — up to 7 per CF on Classical CAN, up to 63 on CAN FD.">Data<span class="bitcount">≤7B (Cl.)</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+          <div class="bitcell" style="--w:2;--c:var(--border-lt)" data-desc="Data byte.">Data</div>
+        </div>
+        <div class="bitfield" id="bfFC" data-group="isotp" style="display:none;">
+          <div class="bitcell" style="--w:1;--c:var(--violet)" data-desc="<b>PCI type = 0x3</b> — this is the receiver talking back to the sender, not message payload.">0x3<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:1;--c:var(--amber)" data-desc="<b>FS</b> — Flow Status. <code>0</code>=Continue To Send, <code>1</code>=Wait (sender pauses, will get another FC later), <code>2</code>=Overflow (receiver can't take this message — sender aborts).">FS<span class="bitcount">nibble</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--green)" data-desc="<b>BS</b> — Block Size. How many Consecutive Frames the sender may transmit before it must stop and wait for the <i>next</i> Flow Control. <code>BS=0</code> means 'send them all, no further FC needed.'">BS<span class="bitcount">byte</span></div>
+          <div class="bitcell" style="--w:2;--c:var(--blue)" data-desc="<b>STmin</b> — Separation Time minimum, the smallest gap the sender must leave between consecutive frames. See the Flow Control slide for the exact encoding table.">STmin<span class="bitcount">byte</span></div>
+        </div>
+        <div class="field-detail" data-for="isotp">Click a field above — start with the <b>PCI type</b> nibble that every ISO-TP frame leads with.</div>
+      </div>
+    </section>
+
+    <!-- 12: FLOW CONTROL DETAIL -->
+    <section class="slide" data-section="iso-tp / multiframe" data-title="Flow Control: FS, BS, STmin">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">ISO-TP · ISO 15765-2</span>
+          <h1 class="title">Flow Control — the receiver sets the pace</h1>
+          <h2 class="subtitle">After the First Frame, the <i>receiver</i> is in charge of throttle: how many frames at a time, and how fast.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Flow Status (FS) values</div>
+            <table class="cmp">
+              <tr><th>FS</th><th>Meaning</th><th>Sender does</th></tr>
+              <tr><td class="hl"><code>0</code> CTS</td><td>Continue To Send</td><td>Sends up to BS Consecutive Frames, STmin apart</td></tr>
+              <tr><td class="hl"><code>1</code> WAIT</td><td>Not ready yet</td><td>Pauses — waits for another FC before sending any CF</td></tr>
+              <tr><td class="hl"><code>2</code> OVFLW</td><td>Overflow — can't buffer this message</td><td>Aborts the transfer entirely (only legal after a First Frame)</td></tr>
+            </table>
+            <div class="panel-title" style="margin-top:14px;"><span class="sw" style="background:var(--green)"></span>Block Size (BS)</div>
+            <p class="lead"><code>BS = N &gt; 0</code>: send exactly N Consecutive Frames, then stop and wait for the next FC. <code>BS = 0</code>: send the entire rest of the message uninterrupted. Tuned by the receiver to match its own buffering / interrupt latency.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>STmin encoding</div>
+            <table class="cmp">
+              <tr><th>Byte value</th><th>Meaning</th></tr>
+              <tr><td class="hl"><code>0x00–0x7F</code></td><td>0–127 ms, 1:1</td></tr>
+              <tr><td class="hl"><code>0x80–0xF0</code></td><td>Reserved</td></tr>
+              <tr><td class="hl"><code>0xF1–0xF9</code></td><td>100–900 µs in 100 µs steps</td></tr>
+              <tr><td class="hl"><code>0xFA–0xFF</code></td><td>Reserved</td></tr>
+            </table>
+            <p class="lead" style="margin-top:12px;">The sender treats STmin as a <i>minimum</i> gap, not a target — many stacks are conservative and pad it slightly to stay safely compliant with the receiver's stated limit. A typical diagnostic tester default is <code>STmin ≈ 0–10 ms</code> unless the ECU asks for more room.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13: MULTIFRAME STEPPER -->
+    <section class="slide" data-section="iso-tp / multiframe" data-title="Multiframe transmission — step through it">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow violet">ISO-TP · ISO 15765-2</span>
+          <h1 class="title">Segmenting a payload, one CAN frame at a time</h1>
+          <h2 class="subtitle">Pick a payload length and watch ISO-TP decide: one Single Frame, or a First Frame + Flow Control + a run of Consecutive Frames gated by Block Size.</h2>
+        </div>
+        <div class="panel">
+          <div class="bform">
+            <div class="bfield"><label>Bus</label><select id="mfBus"><option value="classical">Classical CAN</option><option value="fd">CAN FD</option></select></div>
+            <div class="bfield"><label>Payload (bytes)</label><input type="text" id="mfLen" value="30" style="width:60px;"></div>
+            <div class="bfield"><label>Block Size (BS)</label><input type="text" id="mfBs" value="8" style="width:50px;"></div>
+            <div class="bfield"><label>STmin (ms)</label><input type="text" id="mfStmin" value="5" style="width:50px;"></div>
+            <button class="bbtn tx" id="mfBuild">Segment it</button>
+          </div>
+        </div>
+        <div class="panel grow" style="display:flex; flex-direction:column; min-height:0;">
+          <div class="panel-title">Frame sequence <span class="step-progress" id="mfProgress" style="margin-left:8px;"></span></div>
+          <div class="mf-strip" id="mfStrip"></div>
+          <div class="stepbar">
+            <button class="step-btn" id="mfPrev">‹ Prev</button>
+            <button class="step-btn" id="mfNext">Next ›</button>
+          </div>
+          <div class="step-caption" id="mfCaption"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14: CAN FD SF EXCEPTIONS -->
+    <section class="slide" data-section="iso-tp / multiframe" data-title="CAN FD exceptions for Single Frame length">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">ISO-TP · ISO 15765-2</span>
+          <h1 class="title">CAN FD's Single Frame has <span class="accent-violet">two</span> encodings</h1>
+          <h2 class="subtitle">Classical CAN's 1-byte PCI tops out at 7 data bytes — the low nibble simply can't count higher. CAN FD needs a second, escaped encoding to use its full 62-byte SF capacity.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>Two rules, one PCI type</div>
+              <ul class="bullets compact">
+                <li><b>Payload 1–7 bytes:</b> use the same 1-byte PCI as Classical CAN — high nibble <code>0x0</code>, low nibble = length. Works identically whether the physical frame is Classical or FD.</li>
+                <li><b>Payload 8–62 bytes:</b> the low nibble can't hold a value &gt;7, so it's fixed at <code>0x0</code> too — making byte 0 the literal escape value <code>0x00</code> — and a whole second byte carries the real length, <b>SF_DL</b>, 1–62.</li>
+                <li>62 is the hard ceiling: a 64-byte FD frame minus the 2-byte escape PCI leaves 62 bytes for data — no more.</li>
+                <li>First Frame and Consecutive Frame PCI sizes don't change on FD — FF is always 2 bytes of PCI, CF is always 1 — only the <i>Single</i> Frame gets this extra rule, because it's the only type where "does it all fit in one frame" is even a question.</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Practical note</div>
+              <p class="lead">CAN FD only has 8 legal physical frame sizes (see the DLC table). A 20-byte SF payload needs 22 bytes on the wire (2 PCI + 20 data) — there's no 22-byte FD frame, so it goes out as a 24-byte frame with 2 bytes of padding, typically <code>0xCC</code> or <code>0xAA</code> depending on the tool/OEM convention.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--green)"></span>Live encoder — drag the length</div>
+            <div class="bfield" style="width:100%;">
+              <label>SF payload length: <b id="fdLenVal">20</b> bytes</label>
+              <input type="range" id="fdLen" min="1" max="64" value="20" style="width:100%; accent-color:var(--green);">
+            </div>
+            <div class="field-detail" id="fdOut" style="flex-direction:column; align-items:flex-start; gap:4px; margin-top:12px; min-height:130px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15: UDS MESSAGE STRUCTURE -->
+    <section class="slide" data-section="uds / iso 14229-1" data-title="UDS message structure & addressing">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS · ISO 14229-1</span>
+          <h1 class="title">Every UDS exchange is one of three shapes</h1>
+          <h2 class="subtitle">UDS rides as the payload of an ISO-TP message (Single Frame or segmented) — everything below is what's <i>inside</i> that payload.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Request — client → ECU</span>
+<span class="c-req">SID</span>  [SubFunction]  [Parameter...]
+
+<span class="c-com"># Positive response — SID + 0x40</span>
+<span class="c-resp">SID+0x40</span>  [SubFunction]  [Data...]
+
+<span class="c-com"># Negative response — fixed 3-byte shape</span>
+<span class="c-neg">0x7F</span>  <span class="c-req">SID</span>  NRC</pre>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Suppress positive response — the short version</div>
+              <p class="lead">Only services that carry a <b>SubFunction</b> byte can suppress their positive response, by setting <b>bit 7 (0x80)</b> of that byte. Example: <code>10 03</code> (Extended Session, normal) vs <code>10 83</code> (same request, "don't bother replying if it worked"). A negative response is <b>never</b> suppressed — if something's wrong, the client always hears about it. Full supported-service list on the Suppressed Response slide.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Physical vs. functional addressing</div>
+            <table class="cmp">
+              <tr><th></th><th>Physical</th><th>Functional</th></tr>
+              <tr><td class="hl">Targets</td><td>One specific ECU</td><td>Every ECU listening on that functional ID</td></tr>
+              <tr><td class="hl">Typical arb. ID pattern</td><td><code>0x7E0</code>–<code>0x7E7</code> style, one per ECU</td><td>A shared broadcast ID, e.g. <code>0x7DF</code></td></tr>
+              <tr><td class="hl">Response</td><td>The one ECU replies, physically addressed back</td><td>Every ECU that supports the request may reply — client must handle multiple responses</td></tr>
+              <tr><td class="hl">Common use</td><td>Flashing, security access, DID read/write — anything ECU-specific</td><td>Broadcasting <code>10 03</code> or <code>3E 00</code> to wake up a whole network at once</td></tr>
+            </table>
+            <p class="lead" style="margin-top:12px;">A tester tool almost always uses <b>physical</b> addressing for the actual flash sequence (0x27/0x34/0x36/0x37 must go to one ECU), and reserves <b>functional</b> addressing for broadcast conveniences like putting the whole vehicle into a diagnostic session together.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16: SESSION MODEL -->
+    <section class="slide" data-section="uds / iso 14229-1" data-title="Diagnostic session model">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS · ISO 14229-1</span>
+          <h1 class="title">Sessions gate which services are even legal</h1>
+          <h2 class="subtitle">Almost every service on the next slides checks "am I in the right session?" before doing anything else — this is the state machine underneath that check.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>The three common sessions</div>
+            <div class="row" style="justify-content:space-between; gap:10px; margin:10px 0 16px;">
+              <div class="pill blue" style="font-size:13px;padding:9px 16px;">01 · Default</div>
+              <span style="color:var(--text-faint)">⇄</span>
+              <div class="pill violet" style="font-size:13px;padding:9px 16px;">03 · Extended</div>
+              <span style="color:var(--text-faint)">⇄</span>
+              <div class="pill amber" style="font-size:13px;padding:9px 16px;">02 · Programming</div>
+            </div>
+            <table class="cmp">
+              <tr><th>Session</th><th>What's normally allowed</th></tr>
+              <tr><td class="hl">01 Default</td><td>The power-on state. Read-mostly: <code>0x22</code>, <code>0x19</code>. Reprogramming and most security-gated writes are blocked here.</td></tr>
+              <tr><td class="hl">03 Extended</td><td>Unlocks routine control, most <code>0x2E</code> writes, and is the usual prerequisite for requesting <code>0x27</code> security access.</td></tr>
+              <tr><td class="hl">02 Programming</td><td>Where <code>0x34</code>/<code>0x36</code>/<code>0x37</code> flashing actually happens — reachable only after security access, and it deliberately disables most other services (the ECU is busy).</td></tr>
+            </table>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Falling back to Default</div>
+              <p class="lead">Every non-default session runs an <b>S3 timer</b> (commonly ~5 s). If the client doesn't send <i>something</i> diagnostic before it expires — normally a <code>0x3E</code> TesterPresent keep-alive — the ECU silently drops back to the Default session on its own.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--red)"></span>Why this matters mid-flash</div>
+              <p class="lead">Losing Programming session mid-transfer (S3 timeout, a reset, a dropped tester-present) invalidates the whole 0x34/0x36 sequence — the ECU expects to restart from 0x34. This is exactly why flashing tools hammer TesterPresent throughout the entire OTA sequence.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17: 0x10 -->
+    <section class="slide" data-section="uds services" data-title="0x10 DiagnosticSessionControl">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · shared across OEMs</span>
+          <h1 class="title"><code style="font-size:.8em;">0x10</code> DiagnosticSessionControl</h1>
+          <h2 class="subtitle">The gatekeeper for almost everything else in this deck — every session change starts here.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Request extended session</span>
+<span class="c-req">10 03</span>
+<span class="c-com"># Positive response — echoes subfn + timing</span>
+<span class="c-resp">50 03  00 32  01 F4</span>  <span class="c-com">; P2=0x0032=50ms  P2*=0x01F4×10ms=5000ms</span>
+<span class="c-com"># Suppressed positive response — bit 7 set</span>
+<span class="c-amber">10 83</span>  <span class="c-com">→ no response sent if it succeeds</span></pre>
+            <table class="cmp">
+              <tr><th>SubFn</th><th>Session</th></tr>
+              <tr><td class="hl"><code>01</code></td><td>Default</td></tr>
+              <tr><td class="hl"><code>02</code></td><td>Programming</td></tr>
+              <tr><td class="hl"><code>03</code></td><td>Extended diagnostic</td></tr>
+              <tr><td class="hl"><code>04</code></td><td>Safety-system diagnostic (less common)</td></tr>
+              <tr><td class="hl"><code>40–5F</code></td><td>Vehicle-manufacturer specific</td></tr>
+            </table>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x12 subFunctionNotSupported</span><span class="pill red">0x13 incorrectLength</span><span class="pill amber">0x22 conditionsNotCorrect</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill green">Supported</span> — has a SubFunction byte. Bit 7 = 1 skips the <code>50 …</code> reply on success; a negative response still always comes back.</p></div>
+            <div class="panel">
+              <div class="panel-title">Shared behavior across OEMs</div>
+              <p class="lead">SubFunctions <code>01</code>/<code>02</code>/<code>03</code> mean exactly the same thing on every OEM's ECUs — it's literally standardized. What varies per OEM/ECU is the <b>P2/P2* timing values</b> returned, and whether extra sessions exist in the <code>0x40–0x5F</code> range for supplier tooling.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18: 0x11 -->
+    <section class="slide" data-section="uds services" data-title="0x11 ECUReset">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · shared across OEMs</span>
+          <h1 class="title"><code style="font-size:.8em;">0x11</code> ECUReset</h1>
+          <h2 class="subtitle">Almost always the last step of a flash sequence — commit the new image by rebooting into it.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Hard reset</span>
+<span class="c-req">11 01</span>
+<span class="c-resp">51 01</span>
+<span class="c-com"># Suppressed — tester reboots the bus link anyway,</span>
+<span class="c-com"># doesn't wait for a reply that may never come</span>
+<span class="c-amber">11 81</span></pre>
+            <table class="cmp">
+              <tr><th>SubFn</th><th>Meaning</th></tr>
+              <tr><td class="hl"><code>01</code></td><td>Hard reset — full power-on style reboot</td></tr>
+              <tr><td class="hl"><code>02</code></td><td>Key off / on — simulate ignition cycle</td></tr>
+              <tr><td class="hl"><code>03</code></td><td>Soft reset — restart application without full re-init</td></tr>
+              <tr><td class="hl"><code>04</code>/<code>05</code></td><td>Enable / disable rapid power shutdown</td></tr>
+            </table>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x12</span><span class="pill red">0x13</span><span class="pill amber">0x22 conditionsNotCorrect</span><span class="pill red">0x33 securityAccessDenied</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill green">Supported</span> — commonly used, since the ECU is about to reboot anyway and the response frequently doesn't make it out before the bus drops.</p></div>
+            <div class="panel">
+              <div class="panel-title">Shared behavior across OEMs</div>
+              <p class="lead">SubFunctions <code>01</code>–<code>05</code> are standardized identically everywhere. What differs per OEM: <b>which reset types are permitted from which session</b>, and whether a <code>0x31</code> "check programming dependencies" routine must pass first — most OEMs refuse a reset out of Programming session until that check is clean.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19: 0x19 -->
+    <section class="slide" data-section="uds services" data-title="0x19 ReadDTCInformation">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service</span>
+          <h1 class="title"><code style="font-size:.8em;">0x19</code> ReadDTCInformation</h1>
+          <h2 class="subtitle">Your post-flash sanity check — did the reprogram itself set any new fault codes?</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Report DTCs matching a status mask</span>
+<span class="c-req">19 02 09</span>  <span class="c-com">; subfn=02, mask=0x09 (confirmed + pending)</span>
+<span class="c-resp">59 02 09  01 23 45 08  ...</span>  <span class="c-com">; statusAvailMask, then DTC+status pairs</span></pre>
+            <table class="cmp">
+              <tr><th>SubFn</th><th>Meaning</th></tr>
+              <tr><td class="hl"><code>01</code></td><td>Number of DTCs matching a status mask</td></tr>
+              <tr><td class="hl"><code>02</code></td><td>DTCs matching a status mask</td></tr>
+              <tr><td class="hl"><code>04</code></td><td>Snapshot record for one DTC</td></tr>
+              <tr><td class="hl"><code>06</code></td><td>Extended data record for one DTC</td></tr>
+              <tr><td class="hl"><code>0A</code></td><td>All supported DTCs, regardless of status</td></tr>
+            </table>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x12</span><span class="pill red">0x13</span><span class="pill red">0x31 requestOutOfRange</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill red">Not supported</span> — this service exists purely to return data; there's nothing to suppress.</p></div>
+            <div class="panel">
+              <div class="panel-title">OTA relevance</div>
+              <p class="lead">Run <code>19 0A</code> (or <code>19 02</code> with a "confirmed" mask) immediately after the post-flash reset. Any DTC that wasn't there before the campaign is a hard signal to roll the vehicle back rather than call the update successful.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20: 0x22 -->
+    <section class="slide" data-section="uds services" data-title="0x22 ReadDataByIdentifier">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · shared across OEMs</span>
+          <h1 class="title"><code style="font-size:.8em;">0x22</code> ReadDataByIdentifier</h1>
+          <h2 class="subtitle">No SubFunction byte — the two bytes right after the SID <i>are</i> the parameter: a 16-bit Data Identifier (DID).</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Read the VIN</span>
+<span class="c-req">22 F1 90</span>
+<span class="c-resp">62 F1 90  31 48 47 42 48 34 31 41...</span>  <span class="c-com">; ASCII VIN bytes</span>
+
+<span class="c-com"># Multiple DIDs in one request — ECU concatenates responses</span>
+<span class="c-req">22 F1 86 F1 90</span>
+<span class="c-resp">62 F1 86 03  F1 90 31 48 47 ...</span></pre>
+            <p class="lead">Response length is entirely defined by which DID(s) were asked for — there's no length byte, the client must already know each DID's data size (from the ODX/diagnostic database).</p>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x13</span><span class="pill amber">0x22 conditionsNotCorrect</span><span class="pill red">0x31 requestOutOfRange (unsupported DID)</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill red">Not supported</span> — no SubFunction byte exists to carry the bit, and the whole point of the service is the returned data.</p></div>
+            <div class="panel">
+              <div class="panel-title">Shared behavior across OEMs</div>
+              <p class="lead">Request/response byte layout is universal, and ISO 14229-1 standardizes the <i>meaning</i> of the <code>0xF180–0xF19F</code> identification block (see next slide) across every OEM. Everything from <code>0xF1A0</code> up, plus most of <code>0x0100–0xF0FF</code>, is OEM/supplier-defined territory.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21: DID TABLE -->
+    <section class="slide" data-section="uds services" data-title="DID reference for an OTA engineer">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow blue">Reference · read with 0x22, some written with 0x2E</span>
+          <h1 class="title">DIDs an OTA engineer actually touches</h1>
+          <h2 class="subtitle">The ISO 14229-1 standardized identification block — the same 16 identifiers, meaning the same thing, on virtually every ECU.</h2>
+        </div>
+        <input type="text" class="did-search" id="didSearch" placeholder="Filter by DID or name…">
+        <div class="panel grow scroll-y" style="padding:0;">
+          <table class="cmp" id="didTable" style="font-size:12px;">
+            <thead><tr><th>DID</th><th>Name</th><th>Svc</th><th>Why an OTA engineer cares</th></tr></thead>
+            <tbody>
+              <tr><td class="hl"><code>F186</code></td><td>ActiveDiagnosticSession</td><td>22</td><td>Confirm which session is active before/after a step</td></tr>
+              <tr><td class="hl"><code>F190</code></td><td>VIN</td><td>22</td><td>Bind a campaign/package to the right vehicle</td></tr>
+              <tr><td class="hl"><code>F180</code></td><td>BootSoftwareIdentification</td><td>22</td><td>Bootloader identity — must match before allowing 34/36/37</td></tr>
+              <tr><td class="hl"><code>F181</code></td><td>ApplicationSoftwareIdentification</td><td>22</td><td>Currently-flashed application SW part/version</td></tr>
+              <tr><td class="hl"><code>F183</code></td><td>BootSoftwareFingerprint</td><td>22 / 2E</td><td>Who/when/how the bootloader was last programmed</td></tr>
+              <tr><td class="hl"><code>F184</code></td><td>ApplicationSoftwareFingerprint</td><td>22 / 2E</td><td>Write this right after a successful 0x37 — reprogram traceability</td></tr>
+              <tr><td class="hl"><code>F187</code></td><td>VehicleManufacturerSparePartNumber</td><td>22</td><td>Package eligibility checks</td></tr>
+              <tr><td class="hl"><code>F188</code></td><td>VehicleManufacturerECUSoftwareNumber</td><td>22</td><td>SW part number reported to the OTA backend</td></tr>
+              <tr><td class="hl"><code>F189</code></td><td>VehicleManufacturerECUSoftwareVersionNumber</td><td>22</td><td>Human-readable SW version string</td></tr>
+              <tr><td class="hl"><code>F18A</code></td><td>SystemSupplierIdentifier</td><td>22</td><td>Tier-1 identity — routes supplier-specific OTA logic</td></tr>
+              <tr><td class="hl"><code>F18B</code></td><td>ECUManufacturingDate</td><td>22</td><td>Occasionally used in eligibility rules</td></tr>
+              <tr><td class="hl"><code>F18C</code></td><td>ECUSerialNumber</td><td>22</td><td>Unique unit ID — ties a flash event to one physical ECU</td></tr>
+              <tr><td class="hl"><code>F191</code></td><td>VehicleManufacturerECUHardwareNumber</td><td>22</td><td>Many packages are hardware-revision gated</td></tr>
+              <tr><td class="hl"><code>F193</code></td><td>SystemSupplierECUHardwareVersionNumber</td><td>22</td><td>Same gating purpose, supplier-side revision</td></tr>
+              <tr><td class="hl"><code>F195</code></td><td>SystemSupplierECUSoftwareVersionNumber</td><td>22</td><td>Compared against the campaign's target version</td></tr>
+              <tr><td class="hl"><code>F199</code></td><td>ProgrammingDate</td><td>22 / 2E</td><td>Write after 0x37 completes — timestamp of the last reprogram</td></tr>
+              <tr><td class="hl"><code>F1A0–F1EF</code></td><td><i>OEM-specific block</i></td><td>22 / 2E</td><td>Calibration IDs, CVNs, feature-flag bytes — vendor-defined per ECU</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22: 0x27 -->
+    <section class="slide" data-section="uds services" data-title="0x27 SecurityAccess">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · shared across OEMs (except the algorithm)</span>
+          <h1 class="title"><code style="font-size:.8em;">0x27</code> SecurityAccess</h1>
+          <h2 class="subtitle">A two-message handshake: request a seed, compute a key, send the key back. The handshake shape is universal — the math that turns seed into key is the one thing every OEM keeps proprietary.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Odd subfn = request seed</span>
+<span class="c-req">27 01</span>
+<span class="c-resp">67 01  A4 7C 91 02</span>  <span class="c-com">; 4-byte seed</span>
+
+<span class="c-com"># Even subfn = send computed key</span>
+<span class="c-req">27 02  9F 10 3B 5C</span>
+<span class="c-resp">67 02</span>  <span class="c-com">; key accepted, no payload needed</span>
+
+<span class="c-com"># Seed of all-zero = already unlocked, key step skippable</span></pre>
+            <p class="footnote">Odd levels (0x01, 0x03, 0x05…) request a seed; the next even level (0x02, 0x04, 0x06…) submits the key for that same level. Higher levels are typically gated behind lower ones and/or the Programming session.</p>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row" style="gap:6px;">
+                <span class="pill red">0x24 requestSequenceError</span>
+                <span class="pill red">0x31 invalid level</span>
+                <span class="pill red">0x33 securityAccessDenied</span>
+                <span class="pill red">0x35 invalidKey</span>
+                <span class="pill amber">0x36 exceedNumberOfAttempts (auto)</span>
+                <span class="pill amber">0x37 requiredTimeDelayNotExpired (auto)</span>
+              </div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill red">Not supported</span> — explicitly excluded by ISO 14229-1. The client <i>needs</i> the seed to compute a key, so suppressing the seed response would break the protocol.</p></div>
+            <div class="panel">
+              <div class="panel-title">What's shared vs. proprietary</div>
+              <p class="lead"><b>Shared:</b> odd/even level convention, seed-then-key ordering, and the attempt-counter/delay-timer state machine (0x36 → start a delay → 0x37 until it expires) are identical everywhere. <b>Never shared:</b> the actual seed→key transform — XOR tables, AES, custom ciphers — it's supplier IP by design, and this deck won't guess at any real one.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23: 0x2E -->
+    <section class="slide" data-section="uds services" data-title="0x2E WriteDataByIdentifier">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · shared across OEMs</span>
+          <h1 class="title"><code style="font-size:.8em;">0x2E</code> WriteDataByIdentifier</h1>
+          <h2 class="subtitle">The write-side twin of 0x22 — same DID addressing, now carrying data inbound instead of outbound.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Stamp the application-SW fingerprint after a successful flash</span>
+<span class="c-req">2E F1 84  01 02 26 05 A1 4C 7D 90</span>
+<span class="c-resp">6E F1 84</span>  <span class="c-com">; echoes the DID only, no data</span></pre>
+            <p class="lead">Like 0x22, there's no SubFunction byte and no explicit length field in the response — the ECU either accepts the whole write or rejects it outright, it doesn't partially apply a DID write.</p>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x13</span><span class="pill amber">0x22 conditionsNotCorrect</span><span class="pill red">0x31 requestOutOfRange</span><span class="pill red">0x33 securityAccessDenied</span><span class="pill red">0x72 generalProgrammingFailure</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill red">Not supported</span> — no SubFunction byte.</p></div>
+            <div class="panel">
+              <div class="panel-title">Shared behavior across OEMs</div>
+              <p class="lead">Byte layout is universal; which DIDs are writable (vs. read-only) and from which session/security level is OEM policy. Almost every OEM gates writes to the <code>0xF180–0xF19F</code> fingerprint/version block behind at least Extended session, often security access too — writing your own SW version string is exactly the kind of thing you don't want unlocked by default.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24: 0x31 -->
+    <section class="slide" data-section="uds services" data-title="0x31 RoutineControl">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service</span>
+          <h1 class="title"><code style="font-size:.8em;">0x31</code> RoutineControl</h1>
+          <h2 class="subtitle">"Run this named procedure on the ECU and tell me how it went" — erase memory, checksum a block, check preconditions, anything that isn't a simple read/write.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># Start checkProgrammingDependencies before requesting a reset</span>
+<span class="c-req">31 01  FF 00</span>
+<span class="c-resp">71 01  FF 00  00</span>  <span class="c-com">; status 00 = dependencies OK</span>
+
+<span class="c-com"># Suppressed variant — fire-and-forget "erase" trigger</span>
+<span class="c-amber">31 81  FF 01</span></pre>
+            <table class="cmp">
+              <tr><th>SubFn</th><th>Meaning</th></tr>
+              <tr><td class="hl"><code>01</code></td><td>Start routine</td></tr>
+              <tr><td class="hl"><code>02</code></td><td>Stop routine</td></tr>
+              <tr><td class="hl"><code>03</code></td><td>Request routine results</td></tr>
+            </table>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x12</span><span class="pill red">0x13</span><span class="pill amber">0x22 conditionsNotCorrect</span><span class="pill red">0x24 requestSequenceError</span><span class="pill red">0x31 invalid RID</span><span class="pill red">0x33</span><span class="pill red">0x72</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill green">Supported</span> — has a SubFunction byte, so bit 7 works the same way as 0x10/0x11.</p></div>
+            <div class="panel">
+              <div class="panel-title">OTA-relevant Routine IDs</div>
+              <p class="lead">Routine Identifiers are mostly OEM-assigned (commonly out of the <code>0xE000–0xFEFF</code> range). The one an OTA flow leans on hardest is a "<b>checkProgrammingDependencies</b>"-style routine, run before both entering Programming session and before the final reset — it's the ECU's own gate against committing to a reset with an incomplete or inconsistent image.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 25: 0x34 -->
+    <section class="slide" data-section="uds services" data-title="0x34 RequestDownload">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · flashing</span>
+          <h1 class="title"><code style="font-size:.8em;">0x34</code> RequestDownload</h1>
+          <h2 class="subtitle">"I'm about to send you N bytes starting at address A — how big can each chunk be?" The ECU's answer here shapes every TransferData request that follows.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-com"># dataFormatId=00 (uncompressed/unencrypted), addr&lenFmt=44,
+# 4-byte address 0x08010000, 4-byte size 0x00040000 (256KB)</span>
+<span class="c-req">34 00 44  08 01 00 00  00 04 00 00</span>
+<span class="c-com"># lengthFormatId=02 (2 length-bytes follow), maxBlockLength=0x1000</span>
+<span class="c-resp">74 02  10 00</span></pre>
+            <ul class="bullets compact">
+              <li><code>dataFormatIdentifier</code> — high nibble = compression method, low nibble = encryption method (0x00 = neither).</li>
+              <li><code>addressAndLengthFormatIdentifier</code> — high nibble = byte-length of the size field, low nibble = byte-length of the address field.</li>
+              <li><code>maxNumberOfBlockLength</code> — the ceiling for <b>every</b> subsequent 0x36 request's total message size, including the 2-byte 0x36/BSC overhead.</li>
+            </ul>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs</div>
+              <div class="row"><span class="pill red">0x13</span><span class="pill amber">0x22</span><span class="pill red">0x31</span><span class="pill red">0x33</span><span class="pill red">0x70 uploadDownloadNotAccepted</span></div>
+            </div>
+            <div class="panel"><div class="panel-title">Suppress positive response</div><p class="lead"><span class="pill red">Not supported</span> — no SubFunction byte, and the tester absolutely needs <code>maxNumberOfBlockLength</code> back before it can send a single TransferData.</p></div>
+            <div class="panel">
+              <div class="panel-title">Sets up the next slide</div>
+              <p class="lead">A <code>maxNumberOfBlockLength</code> of <code>0x1000</code> (4096) is far bigger than one CAN frame — that's exactly why every 0x36 request is, itself, an ISO-TP segmented message. Continue to the 0x36 slide.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 26: 0x36 -->
+    <section class="slide" data-section="uds services" data-title="0x36 TransferData & multiframe correlation">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · flashing · two counters, easy to conflate</span>
+          <h1 class="title"><code style="font-size:.8em;">0x36</code> TransferData — one UDS message, many CAN frames</h1>
+          <h2 class="subtitle"><code>maxNumberOfBlockLength</code> from 0x34 is almost always bigger than one CAN frame — so <i>every single</i> 0x36 request rides its own First Frame / Flow Control / Consecutive Frame sequence underneath.</h2>
+        </div>
+        <div class="panel">
+          <pre class="code-block" style="margin-bottom:0;"><span class="c-req">36 2A</span>  <span style="color:var(--text-dim)">&lt;up to maxNumberOfBlockLength−2 bytes of image data&gt;</span>
+<span class="c-resp">76 2A</span>  <span class="c-com">; echoes blockSequenceCounter — 0x2A here, wraps 0x01…0xFF→0x00→0x01…</span></pre>
+        </div>
+        <div class="bform">
+          <div class="bfield"><label>Bus</label><select id="tdBus"><option value="classical" selected>Classical CAN</option><option value="fd">CAN FD</option></select></div>
+          <div class="bfield"><label>maxNumberOfBlockLength</label><input type="text" id="tdMaxBlock" value="4096" style="width:70px;"></div>
+          <div class="bfield"><label>Block Size (BS)</label><input type="text" id="tdBs" value="8" style="width:50px;"></div>
+          <div class="bfield"><label>STmin (ms)</label><input type="text" id="tdStmin" value="2" style="width:50px;"></div>
+          <button class="bbtn tx" id="tdBuild">Recompute</button>
+        </div>
+        <div class="step-caption" id="tdSummary" style="min-height:40px;"></div>
+        <div class="panel grow" style="display:flex; flex-direction:column; min-height:0;">
+          <div class="mf-strip" id="tdStrip"></div>
+          <div class="stepbar">
+            <button class="step-btn" id="tdPrev">‹ Prev</button>
+            <button class="step-btn" id="tdNext">Next ›</button>
+          </div>
+          <div class="step-caption" id="tdCaption"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 27: 0x37 + FULL FLOW -->
+    <section class="slide" data-section="uds services" data-title="0x37 RequestTransferExit & the full OTA sequence">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">UDS service · flashing</span>
+          <h1 class="title"><code style="font-size:.8em;">0x37</code> RequestTransferExit — and the full flash, end to end</h1>
+          <h2 class="subtitle">Closes the transfer, usually while handing over a checksum/signature for the ECU to verify against everything it just received.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="stack">
+            <pre class="code-block"><span class="c-req">37  DE AD BE EF</span>  <span class="c-com">; e.g. a CRC32 of the whole transferred image</span>
+<span class="c-resp">77</span>  <span class="c-com">; or 77 + a signed status/report record</span></pre>
+            <div class="panel">
+              <div class="panel-title">Relevant NRCs · suppress</div>
+              <div class="row" style="margin-bottom:8px;"><span class="pill red">0x24 requestSequenceError</span><span class="pill red">0x31</span><span class="pill red">0x72 generalProgrammingFailure (checksum mismatch)</span></div>
+              <p class="lead"><span class="pill red">Suppress not supported</span> — no SubFunction byte, and the client needs to know definitively whether the whole transfer verified before doing anything else.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>The whole OTA flash sequence</div>
+            <ul class="bullets compact">
+              <li><code>10 03</code> → Extended session</li>
+              <li><code>27 01</code> / <code>27 02</code> → Security access unlock</li>
+              <li><code>31 01 FF00</code> → checkProgrammingDependencies (pre-check)</li>
+              <li><code>10 02</code> → Programming session</li>
+              <li><code>34</code> → RequestDownload, learn maxNumberOfBlockLength</li>
+              <li><code>36 × N</code> → TransferData, one BSC per block, each block itself multi-frame</li>
+              <li><code>37</code> → RequestTransferExit, verify checksum/signature</li>
+              <li><code>31 01 FF00</code> → checkProgrammingDependencies (post-check)</li>
+              <li><code>2E F184 / F199</code> → write fingerprint + programming date</li>
+              <li><code>11 01</code> → hard reset into the new image</li>
+              <li><code>19 0A</code> / <code>22 F186</code> → confirm no new DTCs, confirm active session/version</li>
+            </ul>
+            <p class="footnote" style="margin-top:8px;"><code>3E 00</code> TesterPresent runs throughout, off the critical path, to hold the session open.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 28: NRC TABLE -->
+    <section class="slide" data-section="nrc / timing" data-title="Negative Response Codes & handling">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow red">NRCs · ISO 14229-1 Table A.1</span>
+          <h1 class="title">Negative Response Codes — which ones a tool handles for you</h1>
+          <h2 class="subtitle">A handful of NRCs describe normal, expected pacing rather than a real failure — a competent diagnostic stack absorbs those silently and only surfaces the rest.</h2>
+        </div>
+        <div class="panel grow scroll-y" style="padding:0;">
+          <table class="cmp" style="font-size:12px;">
+            <thead><tr><th>NRC</th><th>Name</th><th>Meaning</th><th>Client / tool handling</th></tr></thead>
+            <tbody>
+              <tr><td class="hl"><code>0x10</code></td><td>generalReject</td><td>Server rejects, no specific reason given</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x11</code></td><td>serviceNotSupported</td><td>SID not implemented on this ECU</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x12</code></td><td>subFunctionNotSupported</td><td>Valid SID, unknown SubFunction</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x13</code></td><td>incorrectMessageLengthOrInvalidFormat</td><td>Request length/format wrong</td><td><span class="pill red">Surfaced — usually a tester bug</span></td></tr>
+              <tr><td class="hl"><code>0x21</code></td><td>busyRepeatRequest</td><td>Server temporarily busy</td><td><span class="pill amber">Auto — retry after a short delay</span></td></tr>
+              <tr><td class="hl"><code>0x22</code></td><td>conditionsNotCorrect</td><td>Preconditions not met (e.g. speed, voltage)</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x24</code></td><td>requestSequenceError</td><td>Wrong order — e.g. 0x36 before 0x34, or key sent before seed</td><td><span class="pill amber">Auto — tool aborts &amp; restarts the sequence</span></td></tr>
+              <tr><td class="hl"><code>0x31</code></td><td>requestOutOfRange</td><td>Invalid DID / routine / memory range</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x33</code></td><td>securityAccessDenied</td><td>Current security state doesn't allow this</td><td><span class="pill red">Surfaced — triggers a 0x27 flow</span></td></tr>
+              <tr><td class="hl"><code>0x35</code></td><td>invalidKey</td><td>Computed key didn't match</td><td><span class="pill red">Surfaced — attempt counter increments</span></td></tr>
+              <tr><td class="hl"><code>0x36</code></td><td>exceedNumberOfAttempts</td><td>Too many failed keys</td><td><span class="pill amber">Auto — starts the 0x37 delay countdown</span></td></tr>
+              <tr><td class="hl"><code>0x37</code></td><td>requiredTimeDelayNotExpired</td><td>Delay timer from 0x36 still running</td><td><span class="pill amber">Auto — wait out the timer, then retry 0x27</span></td></tr>
+              <tr><td class="hl"><code>0x70</code></td><td>uploadDownloadNotAccepted</td><td>0x34/0x35 request rejected</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x71</code></td><td>transferDataSuspended</td><td>0x36 sequence aborted by the server</td><td><span class="pill red">Surfaced — tool may re-attempt from 0x34</span></td></tr>
+              <tr><td class="hl"><code>0x72</code></td><td>generalProgrammingFailure</td><td>Flash / erase / checksum failure</td><td><span class="pill red">Surfaced as failure</span></td></tr>
+              <tr><td class="hl"><code>0x73</code></td><td>wrongBlockSequenceCounter</td><td>0x36 blockSequenceCounter mismatch</td><td><span class="pill amber">Auto — resync counter or restart transfer</span></td></tr>
+              <tr><td class="hl"><code>0x78</code></td><td>requestCorrectlyReceived-ResponsePending</td><td>Server needs more time</td><td><span class="pill amber">Auto — reset timer to P2*, keep waiting</span></td></tr>
+              <tr><td class="hl"><code>0x7E</code></td><td>subFunctionNotSupportedInActiveSession</td><td>Needs a different session</td><td><span class="pill red">Surfaced (some tools auto-switch session)</span></td></tr>
+              <tr><td class="hl"><code>0x7F</code></td><td>serviceNotSupportedInActiveSession</td><td>Needs a different session</td><td><span class="pill red">Surfaced (some tools auto-switch session)</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 29: TIMING DIAGRAM -->
+    <section class="slide" data-section="nrc / timing" data-title="P2 / P2* / no-response timing">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow red">Timing</span>
+          <h1 class="title">P2, P2*, and the difference between "slow" and "silent"</h1>
+          <h2 class="subtitle">Three shapes the wait for a response can take. Only two of them are the same failure mode.</h2>
+        </div>
+        <div class="row">
+          <button class="bbtn ghost tl-scenario-btn" data-key="normal">Normal response</button>
+          <button class="bbtn ghost tl-scenario-btn" data-key="pending">0x78 Response Pending ×2</button>
+          <button class="bbtn ghost tl-scenario-btn" data-key="timeout">No response at all</button>
+        </div>
+        <div class="timeline-wrap">
+          <div class="timeline-axis"></div>
+          <div id="tlSpans"></div>
+          <div id="tlMarkers"></div>
+        </div>
+        <div class="step-caption" id="tlNote" style="min-height:44px;"></div>
+        <div class="cols c3">
+          <div class="panel"><div class="panel-title">P2server_max</div><p class="lead" style="font-size:13px;">Default per-request timeout, commonly ~50ms. Returned by the ECU in the 0x10 response.</p></div>
+          <div class="panel"><div class="panel-title">P2*server_max</div><p class="lead" style="font-size:13px;">Extended timeout after a 0x78, commonly up to ~5s. Also returned by the ECU in the 0x10 response.</p></div>
+          <div class="panel"><div class="panel-title">S3_Client</div><p class="lead" style="font-size:13px;">How long a non-default session survives with no traffic at all — see the Session Model slide. Kept alive with 0x3E.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 30: OEM SHARED BEHAVIOR -->
+    <section class="slide" data-section="oem behavior" data-title="What's shared across OEMs vs. proprietary">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow blue">Cross-OEM behavior</span>
+          <h1 class="title">The byte layout is standard. The policy is not.</h1>
+          <h2 class="subtitle">ISO 14229-1 fixes the wire format for every OEM. What each OEM decides independently is <i>when</i> a service is allowed and <i>what</i> its parameters mean.</h2>
+        </div>
+        <div class="panel grow scroll-y" style="padding:0;">
+          <table class="cmp" style="font-size:12.5px;">
+            <thead><tr><th>Service</th><th>Identical on every OEM</th><th>OEM/supplier-specific</th></tr></thead>
+            <tbody>
+              <tr><td class="hl"><code>0x10</code></td><td>SubFunctions 01/02/03, request/response byte shape</td><td>Actual P2/P2* values; extra sessions in 0x40–0x5F</td></tr>
+              <tr><td class="hl"><code>0x11</code></td><td>SubFunctions 01–05, request/response byte shape</td><td>Which resets are allowed from which session; pre-reset routine gating</td></tr>
+              <tr><td class="hl"><code>0x22</code></td><td>Byte layout; meaning of DIDs 0xF180–0xF19F</td><td>Everything in 0xF1A0+ and most of 0x0100–0xF0FF</td></tr>
+              <tr><td class="hl"><code>0x2E</code></td><td>Byte layout</td><td>Which DIDs are writable, from which session/security level</td></tr>
+              <tr><td class="hl"><code>0x27</code></td><td>Odd/even level convention; attempt-counter &amp; delay-timer state machine (0x36/0x37 NRCs)</td><td><b>The seed→key algorithm itself</b> — always proprietary, by design, never standardized</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="footnote">This is exactly why a generic diagnostic stack can implement session control, reset, and DID read/write once and reuse it across OEMs — but security access always needs an OEM/supplier-specific plugin.</p>
+      </div>
+    </section>
+
+    <!-- 31: SUPPRESS RESPONSE -->
+    <section class="slide" data-section="oem behavior" data-title="Suppressed positive response">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow blue">Suppress positive response</span>
+          <h1 class="title">Only services with a SubFunction byte can go quiet</h1>
+          <h2 class="subtitle">Bit 7 of the SubFunction lives in the same place across every service that has one — but only some of those actually honor it.</h2>
+        </div>
+        <div class="cols c2-wide" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title">All 10 services, at a glance</div>
+            <table class="cmp">
+              <tr><th>SID</th><th>Has SubFn?</th><th>Suppress supported?</th></tr>
+              <tr><td class="hl"><code>10</code></td><td>Yes</td><td style="color:var(--green)">Yes</td></tr>
+              <tr><td class="hl"><code>11</code></td><td>Yes</td><td style="color:var(--green)">Yes</td></tr>
+              <tr><td class="hl"><code>19</code></td><td>Yes</td><td style="color:var(--red)">No</td></tr>
+              <tr><td class="hl"><code>22</code></td><td>No</td><td style="color:var(--red)">No</td></tr>
+              <tr><td class="hl"><code>27</code></td><td>Yes</td><td style="color:var(--red)">No — excluded by spec</td></tr>
+              <tr><td class="hl"><code>2E</code></td><td>No</td><td style="color:var(--red)">No</td></tr>
+              <tr><td class="hl"><code>31</code></td><td>Yes</td><td style="color:var(--green)">Yes</td></tr>
+              <tr><td class="hl"><code>34</code></td><td>No</td><td style="color:var(--red)">No</td></tr>
+              <tr><td class="hl"><code>36</code></td><td>No</td><td style="color:var(--red)">No</td></tr>
+              <tr><td class="hl"><code>37</code></td><td>No</td><td style="color:var(--red)">No</td></tr>
+            </table>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Try it</div>
+            <div class="bform">
+              <div class="bfield"><label>Service</label><select id="supSid">
+                <option value="10">10 · DiagnosticSessionControl</option>
+                <option value="11">11 · ECUReset</option>
+                <option value="19">19 · ReadDTCInformation</option>
+                <option value="22">22 · ReadDataByIdentifier</option>
+                <option value="27">27 · SecurityAccess</option>
+                <option value="2E">2E · WriteDataByIdentifier</option>
+                <option value="31">31 · RoutineControl</option>
+                <option value="34">34 · RequestDownload</option>
+                <option value="36">36 · TransferData</option>
+                <option value="37">37 · RequestTransferExit</option>
+              </select></div>
+              <div class="bchk"><input type="checkbox" id="supBit"><label for="supBit">set bit 7 (0x80)</label></div>
+            </div>
+            <div class="sup-preview field-detail" id="supOut" style="flex-direction:column; align-items:flex-start; gap:2px; margin-top:12px; min-height:120px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 32: CHEAT SHEET -->
+    <section class="slide" data-section="recap" data-title="Cheat sheet">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow amber">Recap</span>
+          <h1 class="title">Everything on one screen</h1>
+          <h2 class="subtitle">From the bit on the wire to the diagnostic service on top of it.</h2>
+        </div>
+        <div class="cheat-grid" style="flex:1;">
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--blue)"></span>Frame skeleton</h4><ul>
+            <li>SOF<b>1b</b></li><li>ID<b>11/29b</b></li><li>Ctrl+DLC<b>nibble</b></li><li>Data<b>0–8 / 0–64B</b></li><li>CRC<b>15 / 17–21b</b></li><li>ACK<b>1 / 2b</b></li><li>EOF<b>7b</b></li>
+          </ul></div>
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--amber)"></span>FD DLC escape</h4><ul>
+            <li>9<b>→12B</b></li><li>A<b>→16B</b></li><li>B<b>→20B</b></li><li>C<b>→24B</b></li><li>D<b>→32B</b></li><li>E<b>→48B</b></li><li>F<b>→64B</b></li>
+          </ul></div>
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--violet)"></span>ISO-TP PCI</h4><ul>
+            <li>0x0<b>Single Frame</b></li><li>0x1<b>First Frame</b></li><li>0x2<b>Consecutive Frame</b></li><li>0x3<b>Flow Control</b></li><li>FD SF &gt;7B<b>escape 0x00+len</b></li>
+          </ul></div>
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--red)"></span>Error types</h4><ul>
+            <li>Bit<b>Tx mismatch</b></li><li>Stuff<b>6th same bit</b></li><li>CRC<b>checksum mismatch</b></li><li>Form<b>bad fixed bit</b></li><li>ACK<b>no ack seen</b></li>
+          </ul></div>
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--green)"></span>Fault confinement</h4><ul>
+            <li>Active<b>&lt;128</b></li><li>Passive<b>128–255</b></li><li>Bus-Off<b>TEC≥256</b></li><li>Tx error<b>+8</b></li><li>Rx error<b>+1</b></li>
+          </ul></div>
+          <div class="cheat-card"><h4><span class="sw" style="background:var(--blue)"></span>UDS quick map</h4><ul>
+            <li>10<b>Session</b></li><li>11<b>Reset</b></li><li>19<b>Read DTC</b></li><li>22/2E<b>Read/Write DID</b></li><li>27<b>Security</b></li><li>31<b>Routine</b></li><li>34/36/37<b>Download/Transfer/Exit</b></li>
+          </ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 33: QUIZ -->
+    <section class="slide" data-section="quiz" data-title="Quiz">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Test yourself</span>
+          <h1 class="title">28 questions — 18 core, 10 advanced</h1>
+          <h2 class="subtitle">Frame structure, error handling, ISO-TP segmentation, and the UDS services covered in this deck.</h2>
+        </div>
+        <div class="quiz-app" data-quiz="main"></div>
+      </div>
+    </section>
+
+    <!-- 34: CLOSING -->
+    <section class="slide" data-section="end" data-title="Closing">
+      <div class="slide-inner center title-slide">
+        <div class="glow"></div>
+        <div class="eyebrow blue" style="margin-bottom:6px;">That's the tour</div>
+        <h1 class="title" style="font-size:44px;">36 <span class="accent-green">02</span> — <span class="accent">transfer complete</span></h1>
+        <p class="title-sub">Bit → nibble → byte → frame → error handling → ISO-TP segmentation → UDS service → OTA flash sequence. Every layer here sits directly on top of the one before it.</p>
+        <div class="panel" style="margin-top:20px; max-width:680px;">
+          <p class="lead">Press <b>G</b> then a number to jump to any slide. ISO 11898 (CAN) · ISO 15765-2 (ISO-TP) · ISO 14229-1 (UDS).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDES-MARKER -->
+  </main>
+
+  <div class="navzone" id="navZone"></div>
+  <nav class="chrome" id="chromeNav">
+    <div class="chrome-brand chrome-fade">
+      <span class="brand">CAN<span class="brand-dot">·</span>UDS</span>
+      <span class="section-tag" id="sectionTag">intro</span>
+    </div>
+    <div class="chrome-count chrome-fade">
+      <span class="slide-count"><span id="slideNum">1</span> / <span id="slideTotal">1</span></span>
+    </div>
+    <div>
+      <div class="chrome-label chrome-fade">Slides</div>
+      <div class="chrome-dots-wrap scroll-y" id="stepDots"></div>
+    </div>
+    <div class="chrome-actions chrome-fade">
+      <button class="nav-btn" id="prevBtn" title="Previous (←)">‹</button>
+      <button class="nav-btn" id="nextBtn" title="Next (→ / Space)">›</button>
+    </div>
+    <div class="chrome-actions chrome-fade">
+      <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+      <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+    </div>
+  </nav>
+
+  <div class="overlay" id="helpOverlay">
+    <div class="overlay-card">
+      <h3>Keyboard shortcuts</h3>
+      <ul>
+        <li><kbd>→</kbd> / <kbd>Space</kbd> <span>Next slide</span></li>
+        <li><kbd>←</kbd> <span>Previous slide</span></li>
+        <li><kbd>F</kbd> <span>Toggle fullscreen</span></li>
+        <li><kbd>G</kbd> <span>Jump to slide (type number + Enter)</span></li>
+        <li><kbd>Esc</kbd> <span>Close this panel</span></li>
+      </ul>
+      <button class="chip-btn" id="closeHelp">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   GENERIC WIDGET HELPERS (bitfields, trace windows, counters, multiframe)
+   ====================================================================== */
+function wireBitfields(){
+  document.querySelectorAll('.bitfield').forEach(bf=>{
+    const cells = Array.from(bf.querySelectorAll('.bitcell'));
+    cells.forEach(cell=>{
+      cell.addEventListener('click', ()=>{
+        cells.forEach(c=>c.classList.remove('active'));
+        cell.classList.add('active');
+        const key = bf.dataset.group || bf.id;
+        const det = document.querySelector('.field-detail[data-for="'+key+'"]');
+        if(det) det.innerHTML = cell.dataset.desc || '';
+      });
+    });
+  });
+  // bitfield tab switching: groups of .bitfield sharing data-group, toggled by .bf-tab[data-target]
+  document.querySelectorAll('.bf-tabs').forEach(tabbar=>{
+    const group = tabbar.dataset.group;
+    const tabs = Array.from(tabbar.querySelectorAll('.bf-tab'));
+    tabs.forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        tabs.forEach(t=>t.classList.toggle('on', t===tab));
+        document.querySelectorAll('.bitfield[data-group="'+group+'"]').forEach(bf=>{
+          bf.style.display = (bf.id === tab.dataset.target) ? 'flex' : 'none';
+        });
+        const det = document.querySelector('.field-detail[data-for="'+group+'"]');
+        if(det) det.innerHTML = 'Click a field above to see what it means.';
+      });
+    });
+  });
+}
+
+/* ---- CANoe/CANalyzer-style trace window ---- */
+function makeTrace(bodyId){
+  const body = document.getElementById(bodyId);
+  let t = 0, n = 0;
+  function emptyCheck(){
+    if(body.children.length===0){
+      body.innerHTML = '<div class="trace-empty">No frames yet — transmit one below.</div>';
+    }
+  }
+  function clearEmpty(){ const e = body.querySelector('.trace-empty'); if(e) e.remove(); }
+  const api = {
+    reset(){ t=0; n=0; body.innerHTML=''; emptyCheck(); },
+    addFrame(f){
+      clearEmpty();
+      t += (0.4 + Math.random()*1.8); n++;
+      const row = document.createElement('div');
+      row.className = 'trace-row ' + (f.dir==='Tx' ? 'tx' : 'rx');
+      const flags = [];
+      if(f.brs) flags.push('<span class="pill blue" style="padding:1px 6px;font-size:9.5px;">BRS</span>');
+      if(f.esi) flags.push('<span class="pill red" style="padding:1px 6px;font-size:9.5px;">ESI</span>');
+      if(f.rtr) flags.push('<span class="pill amber" style="padding:1px 6px;font-size:9.5px;">RTR</span>');
+      row.innerHTML =
+        '<span class="tc time">'+t.toFixed(3)+'</span>'+
+        '<span class="tc dir">'+f.dir+'</span>'+
+        '<span class="tc bus">'+f.bus+'</span>'+
+        '<span class="tc id">'+f.id+'<span class="idtag">'+f.idType+'</span></span>'+
+        '<span class="tc">'+f.name+'</span>'+
+        '<span class="tc">'+f.dlc+'</span>'+
+        '<span class="tc">'+f.len+'</span>'+
+        '<span class="tc data">'+f.data+'</span>'+
+        '<span class="tc">'+flags.join(' ')+'</span>';
+      body.appendChild(row);
+      body.scrollTop = body.scrollHeight;
+    },
+    addError(f){
+      clearEmpty();
+      t += (0.2 + Math.random()*0.6); n++;
+      const row = document.createElement('div');
+      row.className = 'trace-row err';
+      row.innerHTML =
+        '<span class="tc time">'+t.toFixed(3)+'</span>'+
+        '<span class="tc dir">ERR</span>'+
+        '<span class="tc bus">'+f.bus+'</span>'+
+        '<span class="tc id">'+(f.id||'—')+'</span>'+
+        '<span class="tc">'+f.name+'</span>'+
+        '<span class="tc">—</span><span class="tc">—</span>'+
+        '<span class="tc data">'+f.detail+'</span>'+
+        '<span class="tc"><span class="pill red" style="padding:1px 6px;font-size:9.5px;">ERROR FRAME</span></span>';
+      body.appendChild(row);
+      body.scrollTop = body.scrollHeight;
+    }
+  };
+  emptyCheck();
+  return api;
+}
+
+function hexClean(str, max){
+  return (str||'').toUpperCase().replace(/[^0-9A-F ]/g,'').trim();
+}
+function bytesFromHexList(str, count){
+  let parts = (str||'').toUpperCase().replace(/[^0-9A-F ]/g,'').split(/\s+/).filter(Boolean);
+  let out = [];
+  for(let i=0;i<count;i++) out.push(parts[i] ? parts[i].padStart(2,'0').slice(-2) : (i<parts.length?'00':'AA'));
+  return out;
+}
+
+/* ---- ISO-TP multiframe segmentation model ---- */
+function segmentISOTP(totalLen, bus, bs, stmin){
+  const ffPayload = bus==='fd' ? 62 : 6;
+  const cfPayload = bus==='fd' ? 63 : 7;
+  const sfMax = bus==='fd' ? 62 : 7;
+  const frames = [];
+  if(totalLen <= sfMax){
+    frames.push({type:'SF', bytes: totalLen, label:'SF', sub: totalLen+'B'});
+    return {frames, ffPayload, cfPayload};
+  }
+  frames.push({type:'FF', bytes: ffPayload, label:'FF', sub: 'DL='+totalLen});
+  let remaining = totalLen - ffPayload;
+  let cfIndex = 0;
+  let sinceLastFC = 0;
+  // first Flow Control always follows the FF
+  frames.push({type:'FC', label:'FC', sub:'CTS'});
+  while(remaining > 0){
+    cfIndex++;
+    const take = Math.min(cfPayload, remaining);
+    remaining -= take;
+    const sn = ((cfIndex-1) % 15) + 1;
+    frames.push({type:'CF', bytes: take, label:'CF', sub:'SN='+sn});
+    sinceLastFC++;
+    if(bs>0 && sinceLastFC===bs && remaining>0){
+      frames.push({type:'FC', label:'FC', sub:'CTS'});
+      sinceLastFC = 0;
+    }
+  }
+  return {frames, ffPayload, cfPayload};
+}
+
+function renderMFStepper(prefix, totalLen, bus, bs, stmin, maxChips){
+  const {frames} = segmentISOTP(totalLen, bus, bs, stmin);
+  const strip = document.getElementById(prefix+'Strip');
+  const caption = document.getElementById(prefix+'Caption');
+  const progress = document.getElementById(prefix+'Progress');
+  if(!strip) return;
+  strip.innerHTML = '';
+  let shown = frames;
+  let truncated = false;
+  if(maxChips && frames.length > maxChips){
+    shown = frames.slice(0, maxChips);
+    truncated = true;
+  }
+  shown.forEach((f,i)=>{
+    const chip = document.createElement('div');
+    chip.className = 'mf-chip ' + f.type.toLowerCase();
+    chip.dataset.i = i;
+    chip.innerHTML = '<div class="mf-t">'+f.label+'</div><div class="mf-s">'+(f.sub||'')+'</div>';
+    strip.appendChild(chip);
+  });
+  if(truncated){
+    const more = document.createElement('div');
+    more.className = 'mf-chip more';
+    const cfCount = frames.filter(f=>f.type==='CF').length;
+    const fcCount = frames.filter(f=>f.type==='FC').length;
+    more.innerHTML = '<div class="mf-t">+'+(frames.length-shown.length)+'</div><div class="mf-s">more frames</div>';
+    strip.appendChild(more);
+  }
+  const cfCount = frames.filter(f=>f.type==='CF').length;
+  const fcCount = frames.filter(f=>f.type==='FC').length;
+  const totalOnWire = frames.reduce((a,f)=>a + (f.bytes ? f.bytes + (f.type==='SF'?1:(f.type==='FF'?2:1)) : (bus==='fd'?64:8)), 0);
+  if(progress) progress.textContent = frames.length + ' CAN frame(s) — ' + cfCount + ' CF · ' + fcCount + ' FC · ~' + (cfCount*stmin) + 'ms of STmin gaps';
+  const state = { idx: 0, frames, prefix };
+  MF_STATE[prefix] = state;
+  mfGoTo(prefix, 0);
+}
+const MF_STATE = {};
+function mfCaptionFor(f, ctx){
+  if(f.type==='SF') return 'Payload fits in a <b class="v">Single Frame</b> — no segmentation needed. PCI nibble <b>0x0</b> + length, then the data, all in one CAN frame.';
+  if(f.type==='FF') return 'Payload is too big for one frame → <b class="b">First Frame</b>. PCI nibble <b>0x1</b> + 12-bit total length ('+f.sub+'), carrying the first '+f.bytes+' data bytes. The receiver now knows the full length up front.';
+  if(f.type==='FC') return 'Receiver replies with <b>Flow Control</b>: FlowStatus=<b>CTS</b> (Continue To Send), a BlockSize telling the sender how many Consecutive Frames to send before the next FC, and STmin (minimum gap between frames).';
+  if(f.type==='CF') return '<b class="g">Consecutive Frame</b> '+f.sub+' — PCI nibble <b>0x2</b> + a 4-bit sequence number that wraps 1→15→0→1…, carrying up to '+(ctx.cfPayload)+' data bytes each.';
+  return '';
+}
+function mfGoTo(prefix, i){
+  const st = MF_STATE[prefix]; if(!st) return;
+  st.idx = Math.max(0, Math.min(i, st.frames.length-1));
+  const strip = document.getElementById(prefix+'Strip');
+  Array.from(strip.children).forEach((c,ci)=> c.classList.toggle('current', ci===st.idx));
+  const caption = document.getElementById(prefix+'Caption');
+  const bus = document.getElementById(prefix+'Bus') ? document.getElementById(prefix+'Bus').value : 'classical';
+  const ctx = { cfPayload: bus==='fd' ? 63 : 7 };
+  if(caption) caption.innerHTML = '<b>Step '+(st.idx+1)+'/'+st.frames.length+':</b> ' + mfCaptionFor(st.frames[st.idx], ctx);
+}
+function mfStep(prefix, delta){
+  const st = MF_STATE[prefix]; if(!st) return;
+  mfGoTo(prefix, st.idx + delta);
+}
+
+function wireAllWidgets(){
+  /* individual slide widgets register themselves via window.WIDGET_INIT array */
+  (window.WIDGET_INIT||[]).forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
+}
+window.WIDGET_INIT = window.WIDGET_INIT || [];
+</script>
+
+<script>
+/* ======================================================================
+   PER-SLIDE WIDGETS
+   ====================================================================== */
+const FD_LEN_TO_NIBBLE = {0:'0',1:'1',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',12:'9',16:'A',20:'B',24:'C',32:'D',48:'E',64:'F'};
+function dlcNibbleFor(bus, byteCount){
+  if(bus==='fd') return FD_LEN_TO_NIBBLE[byteCount] !== undefined ? FD_LEN_TO_NIBBLE[byteCount] : byteCount.toString(16).toUpperCase();
+  return byteCount.toString(16).toUpperCase();
+}
+function dlcOptionsFor(bus){
+  if(bus==='fd') return [[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6'],[7,'7'],[8,'8'],[12,'9 → 12B'],[16,'A → 16B'],[20,'B → 20B'],[24,'C → 24B'],[32,'D → 32B'],[48,'E → 48B'],[64,'F → 64B']];
+  return [[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6'],[7,'7'],[8,'8']];
+}
+
+/* ---- Slide 9: Frame builder + trace ---- */
+function initFrameBuilder(){
+  const bus = document.getElementById('fbBus');
+  if(!bus) return;
+  const idType = document.getElementById('fbIdType');
+  const idInput = document.getElementById('fbId');
+  const rtrChk = document.getElementById('fbRtr');
+  const dlcSel = document.getElementById('fbDlc');
+  const dataInput = document.getElementById('fbData');
+  const brsChk = document.getElementById('fbBrs');
+  const esiChk = document.getElementById('fbEsi');
+  const dirSel = document.getElementById('fbDir');
+  const sendBtn = document.getElementById('fbSend');
+  const trace = makeTrace('fbTraceBody');
+  window.__mainTrace = trace;
+
+  function refresh(){
+    const opts = dlcOptionsFor(bus.value);
+    dlcSel.innerHTML = opts.map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('');
+    dlcSel.value = 8;
+    rtrChk.disabled = (bus.value==='fd');
+    if(bus.value==='fd') rtrChk.checked = false;
+    brsChk.disabled = (bus.value!=='fd');
+    esiChk.disabled = (bus.value!=='fd');
+    if(bus.value!=='fd'){ brsChk.checked=false; esiChk.checked=false; }
+    idInput.maxLength = idType.value==='ext' ? 8 : 3;
+  }
+  bus.addEventListener('change', refresh);
+  idType.addEventListener('change', refresh);
+  refresh();
+
+  sendBtn.addEventListener('click', ()=>{
+    const isExt = idType.value==='ext';
+    let idRaw = (idInput.value||'').replace(/[^0-9a-fA-F]/g,'');
+    let idNum = parseInt(idRaw||'0', 16);
+    if(isNaN(idNum) || idNum<0) idNum = 0;
+    const maxId = isExt ? 0x1FFFFFFF : 0x7FF;
+    if(idNum > maxId) idNum = maxId;
+    const idHex = '0x'+idNum.toString(16).toUpperCase().padStart(isExt?8:3,'0');
+    const byteCount = parseInt(dlcSel.value,10);
+    const rtr = rtrChk.checked && bus.value!=='fd';
+    const dataBytes = rtr ? [] : bytesFromHexList(dataInput.value, byteCount);
+    trace.addFrame({
+      dir: dirSel.value,
+      bus: bus.value==='fd' ? 'CAN FD' : 'CAN',
+      id: idHex,
+      idType: isExt ? 'EXT' : 'STD',
+      name: rtr ? 'REMOTE' : 'DATA',
+      dlc: dlcNibbleFor(bus.value, byteCount),
+      len: rtr ? '0B' : byteCount+'B',
+      data: rtr ? '—' : dataBytes.join(' '),
+      rtr: rtr,
+      brs: brsChk.checked,
+      esi: esiChk.checked
+    });
+    idInput.value = idInput.value || idRaw;
+  });
+  const clearBtn = document.getElementById('fbClear');
+  if(clearBtn) clearBtn.addEventListener('click', ()=> trace.reset());
+}
+window.WIDGET_INIT.push(initFrameBuilder);
+
+/* ---- Slide 10: error injection + fault confinement counters ---- */
+function initErrorLab(){
+  const roleSel = document.getElementById('erRole');
+  if(!roleSel) return;
+  const idInput = document.getElementById('erId');
+  const trace = makeTrace('erTraceBody');
+  const state = { tec:0, rec:0 };
+  const CAUSES = {
+    bit:   'Bit Error — transmitter drove one polarity but read back the other on the bus (outside arbitration/ACK).',
+    stuff: 'Stuff Error — a 6th consecutive identical bit was seen where a stuff bit was required.',
+    crc:   'CRC Error — recomputed CRC does not match the transmitted CRC field.',
+    form:  'Form Error — a fixed-format bit (delimiter/EOF) was sampled at an illegal value.',
+    ack:   'ACK Error — ACK slot stayed recessive; no node acknowledged the frame.'
+  };
+  function busOff(){ return state.tec >= 256; }
+  function render(){
+    const tecPct = Math.min(state.tec,255)/255*100;
+    const recPct = Math.min(state.rec,255)/255*100;
+    document.getElementById('erTecFill').style.width = tecPct+'%';
+    document.getElementById('erRecFill').style.width = recPct+'%';
+    document.getElementById('erTecVal').textContent = state.tec;
+    document.getElementById('erRecVal').textContent = state.rec;
+    const pill = document.getElementById('erState');
+    if(busOff()){ pill.textContent='BUS-OFF'; pill.className='state-pill busoff'; }
+    else if(state.tec>=128 || state.rec>=128){ pill.textContent='ERROR PASSIVE'; pill.className='state-pill passive'; }
+    else { pill.textContent='ERROR ACTIVE'; pill.className='state-pill active'; }
+    document.querySelectorAll('.erErrBtn').forEach(b=> b.disabled = busOff() && roleSel.value==='tx');
+  }
+  document.querySelectorAll('.erErrBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const cause = btn.dataset.cause;
+      const role = roleSel.value;
+      const id = '0x'+((idInput.value||'7E8').replace(/[^0-9a-fA-F]/g,'')||'7E8').toUpperCase();
+      trace.addError({ bus:'CAN', id, name: (role==='tx'?'TX · ':'RX · ')+cause.toUpperCase()+' ERROR', detail: CAUSES[cause] });
+      if(role==='tx') state.tec = Math.min(state.tec+8, 260); else state.rec = Math.min(state.rec+1, 260);
+      render();
+    });
+  });
+  document.getElementById('erGood').addEventListener('click', ()=>{
+    state.tec = Math.max(0, state.tec-1);
+    state.rec = Math.max(0, state.rec-1);
+    render();
+  });
+  document.getElementById('erReset').addEventListener('click', ()=>{
+    state.tec = 0; state.rec = 0; trace.reset(); render();
+  });
+  render();
+}
+window.WIDGET_INIT.push(initErrorLab);
+
+/* ---- Slide 13: multiframe segmentation stepper ---- */
+function initMultiframe(){
+  const buildBtn = document.getElementById('mfBuild');
+  if(!buildBtn) return;
+  function build(){
+    const bus = document.getElementById('mfBus').value;
+    const len = Math.max(1, parseInt(document.getElementById('mfLen').value,10)||1);
+    const bs = Math.max(0, parseInt(document.getElementById('mfBs').value,10)||0);
+    const stmin = Math.max(0, parseInt(document.getElementById('mfStmin').value,10)||0);
+    renderMFStepper('mf', len, bus, bs, stmin, 60);
+  }
+  buildBtn.addEventListener('click', build);
+  document.getElementById('mfPrev').addEventListener('click', ()=>mfStep('mf',-1));
+  document.getElementById('mfNext').addEventListener('click', ()=>mfStep('mf',1));
+  document.getElementById('mfStrip').addEventListener('click', (e)=>{
+    const chip = e.target.closest('.mf-chip:not(.more)');
+    if(chip) mfGoTo('mf', Number(chip.dataset.i));
+  });
+  build();
+}
+window.WIDGET_INIT.push(initMultiframe);
+
+/* ---- Slide 14: CAN FD single-frame PCI escape encoder ---- */
+const FD_VALID_SIZES = [0,1,2,3,4,5,6,7,8,12,16,20,24,32,48,64];
+function nextValidFDSize(n){ for(const v of FD_VALID_SIZES) if(v>=n) return v; return null; }
+function computeFDSF(len){
+  if(len<1) return {error:'Length must be at least 1 byte.'};
+  if(len>62) return {error:'Max Single Frame payload on CAN FD is 62 bytes (64-byte frame − 2 PCI bytes). Longer payloads need a First Frame instead.'};
+  if(len<=7){
+    const total = 1+len, size = nextValidFDSize(total);
+    return { escape:false, byte0:'0x0'+len.toString(16).toUpperCase(), byte1:null, needed:total, frameSize:size, pad:size-total };
+  }
+  const total = 2+len, size = nextValidFDSize(total);
+  return { escape:true, byte0:'0x00', byte1:'0x'+len.toString(16).toUpperCase().padStart(2,'0'), needed:total, frameSize:size, pad:size-total };
+}
+function initFDEncoder(){
+  const input = document.getElementById('fdLen');
+  if(!input) return;
+  const out = document.getElementById('fdOut');
+  function render(){
+    const len = parseInt(input.value,10)||0;
+    document.getElementById('fdLenVal').textContent = len;
+    const r = computeFDSF(len);
+    if(r.error){ out.innerHTML = '<span style="color:var(--red)">'+r.error+'</span>'; return; }
+    out.innerHTML =
+      '<div>Format: <b>'+(r.escape?'FD escape (2-byte PCI)':'Classical-style (1-byte PCI)')+'</b></div>'+
+      '<div>Byte 0 (PCI): <b>'+r.byte0+'</b>'+(r.escape?' <span class="footnote">(both nibbles 0 — the escape marker)</span>':' <span class="footnote">(high nibble 0 = SF, low nibble = length)</span>')+'</div>'+
+      (r.escape ? '<div>Byte 1 (SF_DL): <b>'+r.byte1+'</b> = '+len+' decimal</div>' : '') +
+      '<div>Bytes needed: <b>'+r.needed+'</b> → next valid CAN FD frame size: <b>'+r.frameSize+' bytes</b> (DLC=<b>0x'+dlcNibbleFor('fd',r.frameSize)+'</b>)</div>'+
+      '<div>Padding bytes: <b>'+r.pad+'</b></div>';
+  }
+  input.addEventListener('input', render);
+  render();
+}
+window.WIDGET_INIT.push(initFDEncoder);
+
+/* ---- Slide 21: DID table filter ---- */
+function initDidFilter(){
+  const search = document.getElementById('didSearch');
+  if(!search) return;
+  const rows = Array.from(document.querySelectorAll('#didTable tbody tr'));
+  search.addEventListener('input', ()=>{
+    const q = search.value.toLowerCase().trim();
+    rows.forEach(r=>{ r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  });
+}
+window.WIDGET_INIT.push(initDidFilter);
+
+/* ---- Slide 26: 0x36 TransferData <-> ISO-TP multiframe correlation ---- */
+function initTransferDataCorrelation(){
+  const buildBtn = document.getElementById('tdBuild');
+  if(!buildBtn) return;
+  function build(){
+    const bus = document.getElementById('tdBus').value;
+    const maxBlock = Math.max(8, parseInt(document.getElementById('tdMaxBlock').value,10)||8);
+    const bs = Math.max(0, parseInt(document.getElementById('tdBs').value,10)||0);
+    const stmin = Math.max(0, parseInt(document.getElementById('tdStmin').value,10)||0);
+    const dataLen = maxBlock - 2; // minus SID(0x36) + blockSequenceCounter
+    renderMFStepper('td', dataLen, bus, bs, stmin, 30);
+    const {frames} = segmentISOTP(dataLen, bus, bs, stmin);
+    const cfCount = frames.filter(f=>f.type==='CF').length;
+    const fcCount = frames.filter(f=>f.type==='FC').length;
+    document.getElementById('tdSummary').innerHTML =
+      'maxNumberOfBlockLength=<b>'+maxBlock+'</b> → this <b>one</b> <code>0x36</code> request carries <b>'+dataLen+'</b> data bytes → '+
+      '<b>'+frames.length+' CAN frames</b> on the wire (1 FF + '+fcCount+' FC + '+cfCount+' CF) — '+
+      'all of it still <b>one single UDS blockSequenceCounter value</b>. The ISO-TP <code>SN</code> nibble cycles 1→15→0→1… across those '+cfCount+' Consecutive Frames; the UDS <code>blockSequenceCounter</code> only advances to the <i>next</i> value on the <i>next</i> 0x36 request.';
+  }
+  buildBtn.addEventListener('click', build);
+  document.getElementById('tdPrev').addEventListener('click', ()=>mfStep('td',-1));
+  document.getElementById('tdNext').addEventListener('click', ()=>mfStep('td',1));
+  document.getElementById('tdStrip').addEventListener('click', (e)=>{
+    const chip = e.target.closest('.mf-chip:not(.more)');
+    if(chip) mfGoTo('td', Number(chip.dataset.i));
+  });
+  build();
+}
+window.WIDGET_INIT.push(initTransferDataCorrelation);
+
+/* ---- Slide 29: P2 / P2* / no-response timing diagram ---- */
+const TIMING_SCENARIOS = {
+  normal: { scaleMax:120,
+    spans:[{from:0,to:50,color:'var(--blue-dim)'}],
+    markers:[
+      {t:0,label:'Request',sub:'10 03',color:'var(--blue)'},
+      {t:40,label:'Response',sub:'50 03 · within P2 (50ms)',color:'var(--green)'}
+    ],
+    note:'<b>Normal case:</b> the positive response arrives inside the P2 window — nothing special happens, no NRC involved at all.' },
+  pending: { scaleMax:5400,
+    spans:[{from:0,to:50,color:'var(--blue-dim)'},{from:50,to:5050,color:'var(--amber-dim)'}],
+    markers:[
+      {t:0,label:'Request',sub:'10 03',color:'var(--blue)'},
+      {t:45,label:'NRC 0x78',sub:'ResponsePending — timer resets to P2*',color:'var(--amber)'},
+      {t:2500,label:'NRC 0x78',sub:'still working — timer resets again',color:'var(--amber)'},
+      {t:4900,label:'Final response',sub:'50 03 · positive',color:'var(--green)'}
+    ],
+    note:'<b>Handled automatically:</b> each <code>0x78</code> restarts a fresh P2* window (commonly up to ~5s). The client keeps waiting — no user-visible error — for as many 0x78s as the ECU sends. This is the standard way an ECU buys itself time for a slow operation (erase, checksum, seed computation) without the tester giving up.' },
+  timeout: { scaleMax:130,
+    spans:[{from:0,to:50,color:'var(--blue-dim)'}],
+    markers:[
+      {t:0,label:'Request',sub:'10 03',color:'var(--blue)'},
+      {t:50,label:'P2 elapses',sub:'nothing received at all',color:'var(--red)'},
+      {t:90,label:'Client timeout',sub:'flags no-response; may retry once, else aborts',color:'var(--red)'}
+    ],
+    note:'<b>Not auto-handled:</b> no response at all — not even a 0x78 — can only be detected by the client\'s own P2 timeout. Unlike the pending case, this is always surfaced as an error. Retry-once-then-fail is common tester-tool behavior, but it is implementation policy, not something ISO 14229-1 mandates.' }
+};
+function renderTimeline(key){
+  const sc = TIMING_SCENARIOS[key];
+  document.querySelectorAll('.tl-scenario-btn').forEach(b=> b.classList.toggle('on', b.dataset.key===key));
+  const spansEl = document.getElementById('tlSpans'); spansEl.innerHTML='';
+  sc.spans.forEach(s=>{
+    const d = document.createElement('div');
+    d.className='timeline-span';
+    d.style.left = (s.from/sc.scaleMax*100)+'%';
+    d.style.width = ((s.to-s.from)/sc.scaleMax*100)+'%';
+    d.style.background = s.color;
+    spansEl.appendChild(d);
+  });
+  const markEl = document.getElementById('tlMarkers'); markEl.innerHTML='';
+  let lastPct = -999, tier = 0;
+  sc.markers.forEach((m,mi)=>{
+    const pct = m.t/sc.scaleMax*100;
+    if(pct - lastPct < 10){ tier = 1 - tier; } else { tier = 0; }
+    lastPct = pct;
+    const d = document.createElement('div');
+    d.className = 'timeline-marker' + (tier===1 ? ' tier1' : '') + (pct<4 ? ' left-align' : (pct>96 ? ' right-align' : ''));
+    d.style.left = pct+'%';
+    d.style.background = m.color;
+    d.innerHTML = '<span class="tm-label" style="color:'+m.color+'">'+m.label+'</span><span class="tm-sub">'+m.sub+'</span>';
+    markEl.appendChild(d);
+  });
+  const noteEl = document.getElementById('tlNote');
+  if(noteEl) noteEl.innerHTML = sc.note;
+}
+function initTimingDiagram(){
+  const btns = document.querySelectorAll('.tl-scenario-btn');
+  if(!btns.length) return;
+  btns.forEach(b=> b.addEventListener('click', ()=> renderTimeline(b.dataset.key)));
+  renderTimeline('normal');
+}
+window.WIDGET_INIT.push(initTimingDiagram);
+
+/* ---- Slide 31: suppressed positive response demo ---- */
+const SUPPRESS_INFO = {
+  '10': {supports:true},  '11': {supports:true},  '19': {supports:false},
+  '22': {hasSub:false},   '27': {supports:false},  '2E': {hasSub:false},
+  '31': {supports:true},  '34': {hasSub:false},    '36': {hasSub:false}, '37': {hasSub:false}
+};
+function initSuppressDemo(){
+  const sel = document.getElementById('supSid');
+  if(!sel) return;
+  const chk = document.getElementById('supBit');
+  function render(){
+    const info = SUPPRESS_INFO[sel.value] || {};
+    const hasSub = info.hasSub !== false;
+    chk.disabled = !hasSub;
+    if(!hasSub) chk.checked = false;
+    const supports = hasSub && info.supports === true;
+    const subVal = 0x01;
+    const withBit = chk.checked ? (subVal|0x80) : subVal;
+    const reqByte = hasSub ? (sel.value+' '+withBit.toString(16).toUpperCase().padStart(2,'0')+' …') : (sel.value+' …');
+    const suppressed = supports && chk.checked;
+    const posSid = (parseInt(sel.value,16)+0x40).toString(16).toUpperCase();
+    const out = document.getElementById('supOut');
+    out.innerHTML =
+      '<div>Request: <b class="c-req">'+reqByte+'</b></div>'+
+      '<div style="margin-top:5px;">Supports suppress? <b style="color:'+(supports?'var(--green)':'var(--red)')+'">'+
+        (supports ? 'Yes' : (hasSub ? 'No — excluded by ISO 14229-1' : 'No — no SubFunction byte to carry the bit')) + '</b></div>'+
+      '<div style="margin-top:5px;">On success: '+(suppressed
+        ? '<span style="color:var(--text-faint)">(suppressed — no positive response is sent)</span>'
+        : '<span class="c-resp">'+posSid+' …</span> positive response sent as usual') + '</div>'+
+      '<div style="margin-top:5px; color:var(--text-faint);">On failure (any NRC): <span class="c-neg">7F '+sel.value+' NRC</span> — always sent, suppress bit or not.</div>';
+  }
+  sel.addEventListener('change', render);
+  chk.addEventListener('change', render);
+  render();
+}
+window.WIDGET_INIT.push(initSuppressDemo);
+
+/* ---- Slide 33: quiz ---- */
+const QUIZ_DATA = [
+  { level:'basic', topic:'Arbitration', q:'What determines which node wins CAN arbitration when two nodes transmit simultaneously?', choices:['A random backoff timer','The node sending the numerically lowest ID — dominant beats recessive, bit by bit','Whichever node started transmitting first','The node with the highest ID'], correct:1, explain:'Nodes send their ID bit-by-bit while monitoring the bus. The instant a node sends recessive but reads dominant, it has lost and backs off — non-destructively.' },
+  { level:'basic', topic:'DLC (Classical)', q:'In Classical CAN, what do DLC values 9–15 actually mean on the wire?', choices:['9–15 data bytes','Always exactly 8 data bytes — there is no way to encode more','An invalid, rejected transmission','They select an extended identifier'], correct:1, explain:'Classical CAN caps out at 8 data bytes. DLC 9–15 are legal bit patterns but all decode to "8 bytes" — they exist for compatibility, not extra length.' },
+  { level:'basic', topic:'DLC (FD)', q:'On CAN FD, what does DLC = 0xD decode to?', choices:['13 bytes','24 bytes','32 bytes','48 bytes'], correct:2, explain:'The FD escape table: 9→12, A→16, B→20, C→24, D→32, E→48, F→64 bytes.' },
+  { level:'basic', topic:'Extended addressing', q:'Which bit tells a receiver the arbitration field is 29-bit Extended rather than 11-bit Standard?', choices:['RTR','IDE','FDF','BRS'], correct:1, explain:'IDE = 0 means Standard; IDE = 1 means 18 more identifier bits follow before the control field.' },
+  { level:'basic', topic:'Bit stuffing', q:'What is the purpose of bit stuffing in a CAN frame?', choices:['Compress the data field','Guarantee enough bit transitions for every receiver to resynchronize its clock','Encrypt the frame','Extend the arbitration ID'], correct:1, explain:'CAN has no separate clock line — receivers resync on edges. A stuffed bit after 5 identical bits in a row guarantees an edge shows up regularly.' },
+  { level:'basic', topic:'CAN FD control bits', q:'Which CAN FD bit allows the data phase to run faster than the arbitration phase?', choices:['ESI','FDF','BRS','RRS'], correct:2, explain:'Bit Rate Switch (BRS), when recessive, switches to the faster data-phase bit rate through the data field and CRC, then back to nominal before the CRC delimiter.' },
+  { level:'basic', topic:'Bit Error', q:'A Bit Error is detected by:', choices:['Any receiver on the bus','The transmitter, comparing what it sent to what it reads back on the bus','Only the ECU owning the lowest ID','A dedicated bus arbitrator node'], correct:1, explain:'Only the transmitter can compare "what I sent" vs. "what\'s actually on the bus" bit for bit — that comparison is exactly what a Bit Error is.' },
+  { level:'basic', topic:'Error flags', q:"What's the difference between an Active and a Passive error flag?", choices:['Active = 6 dominant bits (forces every other node to notice); Passive = 6 recessive bits (invisible on an already-busy bus)','They are identical','Active flags are longer than passive ones','Error-Passive nodes never send error frames'], correct:0, explain:'Active error flags deliberately violate stuffing so every node joins in. Passive flags are quiet by design — an Error-Passive node shouldn\'t disrupt a bus that\'s otherwise fine.' },
+  { level:'basic', topic:'Fault confinement', q:"A node's Transmit Error Counter reaches 300. What state is it in?", choices:['Error Active','Error Passive','Bus-Off','Idle — counters don\'t affect state'], correct:2, explain:'TEC ≥ 256 triggers Bus-Off — the node disconnects entirely until a recovery sequence completes.' },
+  { level:'basic', topic:'ISO-TP PCI', q:"In ISO-TP, what does a First Frame's PCI nibble equal?", choices:['0x0','0x1','0x2','0x3'], correct:1, explain:'0x0=Single Frame, 0x1=First Frame, 0x2=Consecutive Frame, 0x3=Flow Control.' },
+  { level:'basic', topic:'Consecutive Frame SN', q:"What does the Consecutive Frame's Sequence Number do?", choices:['Counts the total message length','Lets the receiver detect a dropped or duplicated CF — it wraps 1→2→…→15→0→1…','Selects which ECU should respond','Sets the STmin gap value'], correct:1, explain:"SN is purely a per-CF integrity check — it's unrelated to the UDS TransferData blockSequenceCounter, a completely separate counter." },
+  { level:'basic', topic:'Single Frame limit', q:'On Classical CAN, what is the maximum ISO-TP Single Frame payload?', choices:['8 bytes','7 bytes','6 bytes','4095 bytes'], correct:1, explain:'1 byte of PCI (type nibble + length nibble) leaves 7 of the 8 available data bytes for payload.' },
+  { level:'basic', topic:'FD SF exception', q:'On CAN FD, how does an ISO-TP Single Frame encode a 40-byte payload?', choices:['Same 1-byte PCI as Classical, just a bigger low nibble','Byte 0 = 0x00 (escape marker), byte 1 = SF_DL = 40','It\'s impossible — must always use a First Frame above 7 bytes','It uses 3 PCI bytes'], correct:1, explain:'The low nibble can\'t represent lengths above 7, so FD escapes to a 2-byte PCI: byte 0 fixed at 0x00, byte 1 carries the real length, 1–62.' },
+  { level:'basic', topic:'UDS positive response', q:"How is a positive response's SID related to the request SID?", choices:['Identical to the request SID','Request SID + 0x40','Request SID − 0x40','Always 0x7F'], correct:1, explain:'0x22 → 0x62, 0x10 → 0x50, 0x27 → 0x67, and so on.' },
+  { level:'basic', topic:'Negative response', q:'What does the response 7F 22 31 mean?', choices:['Service 0x22 succeeded with result 0x31','Service 0x22 failed with NRC 0x31 (requestOutOfRange)','A suppressed response to 0x22','An ISO-TP First Frame'], correct:1, explain:'Negative responses are always 3 bytes: 0x7F, the echoed request SID, then the NRC.' },
+  { level:'basic', topic:'Suppress bit', q:'Which bit, and where, suppresses a UDS positive response?', choices:['Bit 0 of the SID','Bit 7 of the SubFunction byte','Bit 7 of the first data byte, on every service','A dedicated 9th message byte'], correct:1, explain:'Only services that carry a SubFunction byte have this bit available at all — services without one (like 0x22, 0x2E) can\'t suppress anything.' },
+  { level:'basic', topic:'Session requirement', q:'What session is required before most 0x34/0x36/0x37 flashing sequences?', choices:['Default (01)','Programming (02)','Extended only — Programming is never used','No session requirement at all'], correct:1, explain:'RequestDownload/TransferData/RequestTransferExit run in the Programming session, typically reached via Extended session plus a successful SecurityAccess.' },
+  { level:'basic', topic:'TesterPresent', q:'What is the purpose of 0x3E TesterPresent during a long flash sequence?', choices:['Reads pending DTCs','Keeps a non-default session alive past its S3 timeout','Requests a new security seed','Starts a RoutineControl routine'], correct:1, explain:'Without periodic TesterPresent, the S3 timer expires and the ECU silently drops back to the Default session — invalidating an in-progress flash.' },
+  { level:'advanced', topic:'SecurityAccess levels', q:'SecurityAccess (0x27): what do odd vs. even SubFunction levels mean?', choices:['Odd = request seed, even = send key','Odd = send key, even = request seed','They are interchangeable','Odd = physical addressing, even = functional'], correct:0, explain:'0x01/0x03/0x05… request a seed for that level; the matching 0x02/0x04/0x06… submits the computed key for the same level.' },
+  { level:'advanced', topic:'Why 0x27 excludes suppress', q:"Why doesn't 0x27 SecurityAccess support suppressed positive response, even though it has a SubFunction byte?", choices:['It has no SubFunction byte — false premise','The client needs the returned seed to compute a key; suppressing that response would break the protocol','OEMs forbid it for legal reasons unrelated to the protocol','It always fails, so there is nothing to suppress'], correct:1, explain:'ISO 14229-1 explicitly excludes SecurityAccess from suppress support — the seed is mandatory data the client cannot proceed without.' },
+  { level:'advanced', topic:'Response Pending', q:'An ECU replies with NRC 0x78 twice, then finally sends a positive response. What should a compliant client do?', choices:['Abort on the first 0x78','Reset its wait timer to P2* on each 0x78 and keep waiting','Immediately retransmit the original request after each 0x78','Treat every 0x78 as a fatal error'], correct:1, explain:'0x78 is normal pacing, not a failure — the client extends its timeout to P2* and stays quiet, waiting for the eventual final response.' },
+  { level:'advanced', topic:'BSC vs. ISO-TP SN', q:'In service 0x36 TransferData, which counter increments once per CAN Consecutive Frame rather than once per TransferData message?', choices:['blockSequenceCounter','The ISO-TP SN (sequence number)','maxNumberOfBlockLength','The DID being written'], correct:1, explain:'blockSequenceCounter advances once per 0x36 request; the ISO-TP SN inside that single request advances once per CAN frame and resets for the next 0x36.' },
+  { level:'advanced', topic:'0x34 → 0x36 correlation', q:'RequestDownload (0x34) returns maxNumberOfBlockLength = 0x1000 (4096) on a Classical CAN bus. What does that imply about a single 0x36 request?', choices:['It always fits in one CAN frame','It gets segmented into an ISO-TP First Frame, Flow Control, and many Consecutive Frames — all under one blockSequenceCounter value','It\'s an invalid value for Classical CAN','It forces Block Size to always be 0'], correct:1, explain:'4096 bytes is far larger than a Classical CAN frame\'s 7-byte CF payload, so ISO-TP transparently segments that one 0x36 message across many CAN frames.' },
+  { level:'advanced', topic:'0x36 NRC', q:'Which NRC on service 0x36 tells the client the blockSequenceCounter did not match what the ECU expected?', choices:['0x24 requestSequenceError','0x73 wrongBlockSequenceCounter','0x71 transferDataSuspended','0x33 securityAccessDenied'], correct:1, explain:'0x73 is specific to a mismatched blockSequenceCounter; 0x24 covers a broader class of out-of-order service calls.' },
+  { level:'advanced', topic:'FD fixed stuffing', q:'Why does CAN FD switch to a fixed stuff-bit scheme (one every 4 bits) inside the CRC field, instead of the usual "after 5 identical bits" rule?', choices:['It computes faster in hardware','It closes a gap where a lost/gained stuff bit could otherwise go undetected by the CRC alone — more important at the faster data-phase rate','FD doesn\'t stuff bits in the CRC field at all','It shortens the CRC field length'], correct:1, explain:'Combined with the 3-bit stuff-count field, this gives the receiver an independent check that it removed exactly the right number of stuff bits.' },
+  { level:'advanced', topic:'ESI', q:"Which CAN FD field lets a transmitting node broadcast its own current fault-confinement health to the rest of the bus?", choices:['BRS','ESI','FDF','RRS'], correct:1, explain:'Error State Indicator: dominant = the transmitter is Error Active, recessive = Error Passive. Classical CAN has no equivalent.' },
+  { level:'advanced', topic:'Flow Control WAIT', q:'A sender receives a Flow Control frame with FS = 1 (WAIT). What must it do?', choices:['Abort the transfer immediately','Pause and wait for another Flow Control frame before sending any more Consecutive Frames','Ignore it and keep sending CFs','Switch from physical to functional addressing'], correct:1, explain:'WAIT tells the sender the receiver isn\'t ready yet — it must hold off until a subsequent FC (with CTS or another WAIT) arrives.' },
+  { level:'advanced', topic:'SRR vs RTR', q:'Why can an Extended (29-bit) frame still arbitrate deterministically against a Standard (11-bit) frame that shares the same base 11 identifier bits?', choices:['It can\'t — the outcome is undefined', 'SRR (always recessive) sits exactly where RTR would be for a Standard data frame (dominant) — so the Standard data frame always wins that bit', 'Extended frames are required to transmit first', 'The bus picks a winner at random in that case'], correct:1, explain:'That\'s precisely why SRR exists — as a placeholder occupying RTR\'s bit position, keeping arbitration well-defined even in this collision case.' },
+];
+
+class QuizController{
+  constructor(root){ this.root = root; this.i = 0; this.answers = new Array(QUIZ_DATA.length).fill(null); this.render(); }
+  reset(){ this.i = 0; this.answers = new Array(QUIZ_DATA.length).fill(null); this.render(); }
+  score(level){ let s=0; QUIZ_DATA.forEach((q,idx)=>{ if((level==null||q.level===level) && this.answers[idx]===q.correct) s++; }); return s; }
+  answeredCount(){ return this.answers.filter(a=>a!==null).length; }
+  totalScore(){ return this.score(null); }
+  choose(choiceIdx){ if(this.answers[this.i] !== null) return; this.answers[this.i] = choiceIdx; this.render(); }
+  next(){ if(this.i < QUIZ_DATA.length-1){ this.i++; this.render(); } else { this.i = QUIZ_DATA.length; this.render(); } }
+  render(){
+    if(this.i >= QUIZ_DATA.length){ this.renderSummary(); return; }
+    const q = QUIZ_DATA[this.i], answered = this.answers[this.i], total = QUIZ_DATA.length, letters=['A','B','C','D'];
+    const choicesHtml = q.choices.map((c,idx)=>{
+      let cls='quiz-choice';
+      if(answered!==null){ if(idx===q.correct) cls+=' correct'; else if(idx===answered) cls+=' incorrect'; }
+      return '<button class="'+cls+'" data-idx="'+idx+'" '+(answered!==null?'disabled':'')+'><span class="qletter">'+letters[idx]+'</span><span class="qtext">'+c+'</span><span class="qdot"></span></button>';
+    }).join('');
+    this.root.innerHTML =
+      '<div class="quiz-head"><span class="quiz-badge '+(q.level==='advanced'?'advanced':'basic')+'">'+(q.level==='advanced'?'Advanced':'Basic / Mid')+'</span>'+
+      '<div class="quiz-progress-wrap"><div class="quiz-progress-label"><span>Question '+(this.i+1)+' of '+total+'</span><span>'+q.topic+'</span></div>'+
+      '<div class="quiz-progress-track"><div class="quiz-progress-fill" style="width:'+(this.i/total*100)+'%"></div></div></div>'+
+      '<div class="quiz-score"><span class="dotstat-mini"></span>'+this.totalScore()+' / '+this.answeredCount()+' correct</div></div>'+
+      '<div class="quiz-body"><div class="quiz-q">'+q.q+'</div><div class="quiz-choices '+(answered!==null?'answered':'')+'">'+choicesHtml+'</div>'+
+      '<div class="quiz-explain '+(answered!==null?'show':'')+'"><b>'+(answered===q.correct?'Correct.':'Not quite.')+'</b> '+q.explain+'</div></div>'+
+      '<div class="quiz-nav"><button class="quiz-next-btn '+(answered!==null?'show':'')+'">'+(this.i===total-1?'See results':'Next question')+' →</button></div>';
+    this.root.querySelectorAll('.quiz-choice').forEach(btn=>{ btn.addEventListener('click', ()=> this.choose(Number(btn.dataset.idx))); });
+    const nextBtn = this.root.querySelector('.quiz-next-btn');
+    if(nextBtn) nextBtn.addEventListener('click', ()=> this.next());
+  }
+  renderSummary(){
+    const total = QUIZ_DATA.length, score = this.totalScore();
+    const basicScore = this.score('basic'), basicTotal = QUIZ_DATA.filter(q=>q.level==='basic').length;
+    const advScore = this.score('advanced'), advTotal = QUIZ_DATA.filter(q=>q.level==='advanced').length;
+    const pct = score/total;
+    let level, note;
+    if(pct >= 0.87){ level='OTA-flash ready'; note='Strong grasp of both the CAN/FD physical layer and the UDS flashing sequence — session, security, download/transfer/exit, and the timing edge cases that trip people up in the field.'; }
+    else if(pct >= 0.67){ level='Solid working knowledge'; note='Comfortable with frame structure and the core UDS services. Worth another pass on ISO-TP segmentation and the NRC/timing details before relying on this independently during a live campaign.'; }
+    else if(pct >= 0.40){ level='Building the fundamentals'; note='The shape of things is there, but revisit the frame bit-layout and ISO-TP slides — those underpin everything the UDS section builds on.'; }
+    else { level='Early stage'; note='Start again from the CAN frame structure slides and work forward — ISO-TP and UDS will make a lot more sense once the frame layer is solid.'; }
+    this.root.innerHTML =
+      '<div class="quiz-summary"><div class="quiz-summary-score">'+score+'<span> / '+total+'</span></div>'+
+      '<div class="quiz-summary-level">'+level+'</div>'+
+      '<div class="quiz-summary-bars"><div class="quiz-summary-bar-item"><span class="qb-value">'+basicScore+'/'+basicTotal+'</span><span class="qb-label">Basic · Mid</span></div>'+
+      '<div class="quiz-summary-bar-item"><span class="qb-value">'+advScore+'/'+advTotal+'</span><span class="qb-label">Advanced</span></div></div>'+
+      '<p class="quiz-summary-note">'+note+'</p><button class="quiz-restart-btn">⟲ Restart quiz</button></div>';
+    this.root.querySelector('.quiz-restart-btn').addEventListener('click', ()=> this.reset());
+  }
+}
+function initQuiz(){
+  const root = document.querySelector('[data-quiz="main"]');
+  if(!root) return;
+  new QuizController(root);
+}
+window.WIDGET_INIT.push(initQuiz);
+
+/* WIDGETS-MARKER */
+</script>
+
+<script>
+/* ======================================================================
+   DECK ENGINE (navigation, chrome, keyboard, fullscreen, help)
+   ====================================================================== */
+(function(){
+"use strict";
+const Deck = {
+  slides: [],
+  idx: 0,
+  init(){
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    document.getElementById('slideTotal').textContent = this.slides.length;
+    this.buildStepDots();
+    this.goTo(0, true);
+    this.wireEvents();
+    setupChromeHover();
+    this.scale();
+    window.addEventListener('resize', ()=>this.scale());
+  },
+  scale(){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pad = 24;
+    const s = Math.min(vw/1280, (vh-pad)/720);
+    document.getElementById('deck').style.transform = `translate(-50%,-50%) scale(${Math.max(s,0.32)})`;
+  },
+  buildStepDots(){
+    const wrap = document.getElementById('stepDots');
+    wrap.innerHTML = '';
+    this.slides.forEach((slideEl,i)=>{
+      const name = slideEl.dataset.title || slideEl.dataset.section || ('Slide '+(i+1));
+      const row = document.createElement('div');
+      row.className = 'dot-row';
+      row.title = `${i+1}. ${name}`;
+      const dot = document.createElement('span'); dot.className = 'stepdot';
+      const label = document.createElement('span'); label.className = 'dot-label'; label.textContent = name;
+      row.appendChild(dot); row.appendChild(label);
+      row.addEventListener('click', ()=>this.goTo(i));
+      wrap.appendChild(row);
+    });
+  },
+  updateChrome(){
+    document.getElementById('slideNum').textContent = this.idx+1;
+    document.getElementById('progressFill').style.width = ((this.idx+1)/this.slides.length*100)+'%';
+    document.getElementById('sectionTag').textContent = this.slides[this.idx].dataset.section || '';
+    document.querySelectorAll('#stepDots .dot-row').forEach((row,i)=>{
+      const done = i < this.idx, current = i === this.idx;
+      row.classList.toggle('current', current);
+      const dot = row.querySelector('.stepdot');
+      dot.classList.toggle('done', done);
+      dot.classList.toggle('current', current);
+      if(current) row.scrollIntoView({block:'nearest'});
+    });
+  },
+  goTo(i, first){
+    if(i<0 || i>=this.slides.length) return;
+    const prevSlide = this.slides[this.idx];
+    if(!first && prevSlide) prevSlide.classList.remove('active');
+    this.idx = i;
+    this.slides[i].classList.add('active');
+    this.updateChrome();
+  },
+  next(){ if(this.idx < this.slides.length-1) this.goTo(this.idx+1); },
+  prev(){ if(this.idx > 0) this.goTo(this.idx-1); },
+  wireEvents(){
+    document.getElementById('prevBtn').addEventListener('click', ()=>this.prev());
+    document.getElementById('nextBtn').addEventListener('click', ()=>this.next());
+    document.getElementById('fsBtn').addEventListener('click', toggleFullscreen);
+    document.getElementById('helpBtn').addEventListener('click', ()=>showHelp(true));
+    document.getElementById('closeHelp').addEventListener('click', ()=>showHelp(false));
+    document.getElementById('helpOverlay').addEventListener('click', (e)=>{ if(e.target.id==='helpOverlay') showHelp(false); });
+
+    let gPending = false, gBuffer = '';
+    window.addEventListener('keydown', (e)=>{
+      if(document.getElementById('helpOverlay').classList.contains('show')){
+        if(e.key==='Escape') showHelp(false);
+        return;
+      }
+      const tag = (e.target && e.target.tagName) || '';
+      if(tag==='INPUT' || tag==='SELECT' || tag==='TEXTAREA') return;
+      if(gPending){
+        if(/[0-9]/.test(e.key)){ gBuffer += e.key; return; }
+        if(e.key==='Enter'){ const n = parseInt(gBuffer,10); if(!isNaN(n)) Deck.goTo(n-1); gPending=false; gBuffer=''; return; }
+        gPending=false; gBuffer='';
+      }
+      if(e.key==='ArrowRight' || e.key===' '){ e.preventDefault(); Deck.next(); }
+      else if(e.key==='ArrowLeft'){ e.preventDefault(); Deck.prev(); }
+      else if(e.key==='f' || e.key==='F'){ toggleFullscreen(); }
+      else if(e.key==='?'){ showHelp(true); }
+      else if(e.key==='g' || e.key==='G'){ gPending = true; gBuffer=''; }
+      else if(e.key==='Escape'){ showHelp(false); }
+    });
+
+    document.getElementById('deck').addEventListener('click', (e)=>{
+      if(e.target.closest('button, input, select, a, .bitcell, .mf-chip, .trace-window, .bform')) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const rel = (e.clientX-rect.left)/rect.width;
+      if(rel > 0.92) Deck.next();
+      else if(rel < 0.08) Deck.prev();
+    });
+  }
+};
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+function showHelp(show){ document.getElementById('helpOverlay').classList.toggle('show', show); }
+
+function setupChromeHover(){
+  const zone = document.getElementById('navZone');
+  const chrome = document.getElementById('chromeNav');
+  let closeTimer = null;
+  function open(){ clearTimeout(closeTimer); chrome.classList.add('open'); }
+  function scheduleClose(){ closeTimer = setTimeout(()=>chrome.classList.remove('open'), 260); }
+  zone.addEventListener('mouseenter', open);
+  zone.addEventListener('mouseleave', scheduleClose);
+  chrome.addEventListener('mouseenter', open);
+  chrome.addEventListener('mouseleave', scheduleClose);
+}
+
+window.Deck = Deck;
+window.addEventListener('DOMContentLoaded', ()=>{
+  Deck.init();
+  wireBitfields();
+  wireAllWidgets();
+});
+})();
+</script>
+
+</body>
+</html>
