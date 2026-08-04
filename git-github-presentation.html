@@ -174,6 +174,12 @@ button{ font-family:inherit; cursor:pointer; }
   font-family:var(--font-mono); font-size:14px; color:var(--text-faint); margin-top:6px;
 }
 .title-path span{ color:var(--blue); }
+.title-byline{
+  font-family:var(--font-mono); font-size:13px; color:var(--text-faint); margin-top:16px;
+}
+.title-byline b{ color:var(--text-dim); font-weight:600; }
+.title-byline a{ color:var(--blue); text-decoration:none; border-bottom:1px solid var(--blue-dim); }
+.title-byline a:hover{ border-bottom-color:var(--blue); }
 
 /* ======================================================================
    LAYOUT HELPERS
@@ -267,6 +273,14 @@ pre.code-block .c-conflict, .conflict-block .c-conflict{ color:var(--amber); }
   display:flex; align-items:center;
 }
 .anatomy-detail b{ color:var(--text); font-family:var(--font-mono); }
+
+/* ======================================================================
+   SCENE (interactive diagram + terminal, laid out side by side)
+   ====================================================================== */
+.scene{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.scene-row{ min-width:0; min-height:0; }
+.scene-top{ min-width:0; }
+.scene-code{ min-width:0; }
 
 /* ======================================================================
    TERMINAL
@@ -371,9 +385,9 @@ pre.code-block .c-conflict, .conflict-block .c-conflict{ color:var(--amber); }
   padding:10px; position:relative; min-height:0; height:100%;
   display:flex; flex-direction:column; gap:6px;
 }
-.graph-wrap .panel-title{ margin-bottom:0; flex:none; }
-.graph-titlebar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; }
-.graph-toolbar{ display:flex; align-items:center; gap:4px; }
+.graph-wrap .panel-title{ margin-bottom:0; flex:1 1 auto; min-width:0; }
+.graph-titlebar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; flex-wrap:wrap; row-gap:6px; }
+.graph-toolbar{ display:flex; align-items:center; gap:4px; flex:none; }
 .graph-tbtn{
   width:24px; height:24px; display:flex; align-items:center; justify-content:center;
   background:var(--panel-2); border:1px solid var(--border-lt); border-radius:5px;
@@ -554,28 +568,88 @@ table.cmp code{ font-size:.85em; }
 .cheat-card li b{ color:var(--text); font-weight:600; }
 
 /* ======================================================================
-   CHROME / NAV
+   CHROME / NAV — a rail of progress dots pinned to the left edge; it
+   expands in place into a full sidebar (with slide/step names) on hover
    ====================================================================== */
-.chrome{
-  position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-  display:flex; align-items:center; gap:18px;
-  background:rgba(16,21,29,.92); backdrop-filter:blur(10px);
-  border:1px solid var(--border); border-radius:12px; padding:8px 14px;
-  z-index:60; box-shadow:0 10px 30px rgba(0,0,0,.4);
+.navzone{
+  position:fixed; top:0; left:0; width:40px; height:100%; z-index:59;
 }
-.chrome-left{ display:flex; align-items:center; gap:10px; }
-.brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); }
+.chrome{
+  position:fixed; top:50%; left:10px; transform:translateY(-50%);
+  display:flex; flex-direction:column; gap:10px;
+  background:rgba(16,21,29,.95); backdrop-filter:blur(10px);
+  border:1px solid var(--border); border-radius:14px;
+  padding:14px 8px;
+  width:34px; max-height:82vh; overflow:hidden;
+  z-index:60; box-shadow:0 14px 34px rgba(0,0,0,.5);
+  transition:width .32s cubic-bezier(.4,0,.2,1), padding .32s ease;
+}
+.chrome.open{ width:290px; padding:16px 14px; }
+
+/* rows that only make sense once the sidebar is wide enough to read */
+.chrome-fade{
+  max-height:0; opacity:0; overflow:hidden; pointer-events:none;
+  transition:max-height .3s ease, opacity .18s ease;
+}
+.chrome.open .chrome-fade{ max-height:200px; opacity:1; pointer-events:auto; }
+
+.chrome-brand{ display:flex; flex-direction:column; gap:4px; }
+.brand{ font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; }
 .brand-dot{ color:var(--amber); }
 .section-tag{
   font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
-  border-left:1px solid var(--border-lt); padding-left:10px;
+  border-top:1px solid var(--border-lt); padding-top:6px; white-space:nowrap;
 }
-.chrome-mid{ display:flex; gap:5px; max-width:280px; overflow:hidden; }
-.stepdot{ width:6px; height:6px; border-radius:50%; background:var(--border-lt); transition:all .25s ease; flex:none; }
+.chrome-count{ display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.chrome-label{
+  font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--text-faint); margin-bottom:4px; white-space:nowrap;
+}
+
+.chrome-dots-wrap{ display:flex; flex-direction:column; gap:3px; max-height:280px; overflow-y:auto; overflow-x:hidden; }
+.dot-row{
+  display:flex; align-items:center; gap:10px; padding:3px 2px; border-radius:6px;
+  cursor:pointer; transition:background .15s ease;
+}
+.dot-row:hover{ background:var(--panel-2); }
+.dot-row .dot-label{
+  font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:0; opacity:0;
+  transition:max-width .3s ease, opacity .2s ease;
+}
+.chrome.open .dot-row .dot-label{ max-width:200px; opacity:1; }
+.dot-row.current .dot-label{ color:var(--text); font-weight:600; }
+.stepdot{
+  width:8px; height:8px; border-radius:50%; background:var(--border-lt); flex:none;
+  transition:all .2s ease;
+}
+.dot-row:hover .stepdot{ filter:brightness(1.6); transform:scale(1.15); }
 .stepdot.done{ background:var(--blue); }
-.stepdot.current{ background:var(--amber); width:16px; border-radius:3px; }
-.chrome-right{ display:flex; align-items:center; gap:8px; }
-.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); margin:0 4px; }
+.stepdot.current{ background:var(--amber); height:20px; border-radius:4px; }
+
+.chrome-subdots-wrap{
+  display:flex; flex-direction:column; gap:3px; padding-top:8px; margin-top:2px;
+  border-top:1px solid var(--border-lt); max-height:170px; overflow-y:auto; overflow-x:hidden;
+}
+.subdot-row{ display:flex; align-items:center; gap:10px; padding:2px; border-radius:6px; cursor:pointer; transition:background .15s ease; }
+.subdot-row:hover{ background:var(--panel-2); }
+.subdot-row .subdot-label{
+  font-family:var(--font-sans); font-size:11px; color:var(--text-dim); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:0; opacity:0;
+  transition:max-width .3s ease, opacity .2s ease;
+}
+.chrome.open .subdot-row .subdot-label{ max-width:180px; opacity:1; }
+.subdot-row.current .subdot-label{ color:var(--text); }
+.subdot{
+  width:6px; height:6px; border-radius:50%; background:var(--border-lt); flex:none;
+  transition:all .2s ease;
+}
+.subdot-row:hover .subdot{ filter:brightness(1.6); transform:scale(1.2); }
+.subdot.done{ background:var(--blue); }
+.subdot.current{ background:var(--amber); width:14px; border-radius:3px; }
+
+.chrome-actions{ display:flex; align-items:center; gap:8px; }
+.slide-count{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); white-space:nowrap; }
 .slide-count.sub-count{
   color:var(--amber); background:rgba(227,179,65,.1); border:1px solid rgba(227,179,65,.35);
   border-radius:6px; padding:3px 8px; margin:0;
@@ -583,7 +657,7 @@ table.cmp code{ font-size:.85em; }
 .chip-btn, .nav-btn{
   background:var(--panel-2); border:1px solid var(--border-lt); color:var(--text-dim);
   width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
-  font-size:14px; transition:all .2s ease;
+  font-size:14px; transition:all .2s ease; flex:none;
 }
 .chip-btn:hover, .nav-btn:hover{ color:var(--text); border-color:var(--blue); }
 .nav-btn{ font-size:18px; }
@@ -752,6 +826,7 @@ table.cmp code{ font-size:.85em; }
         <div class="title-wordmark">git<span class="dot">·</span>log</div>
         <p class="title-sub">A hands-on tour of Git &amp; GitHub — from a single keystroke in your editor to a merged pull request. Every command shown next to the workspace, staging area, stash, commit graph and remote it actually touches.</p>
         <div class="title-path">$ <span>cd</span> ~/from-a-single-edit-to-github</div>
+        <div class="title-byline">By <b>@orgutier</b> &amp; Claude — <a href="https://github.com/orgutier/GithubTraining" target="_blank" rel="noopener">github.com/orgutier/GithubTraining</a></div>
         <div class="title-meta">
           <span><b>→</b> / Space — advance</span>
           <span><b>R</b> — replay animation</span>
@@ -906,6 +981,30 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 6b — RESTORE -->
+    <section class="slide" data-section="workspace → commit">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">Core loop</span>
+          <h1 class="title"><code style="font-size:.85em;">git restore</code> — undo one file, precisely</h1>
+          <h2 class="subtitle">Two different undos, one command: unstage a file without touching its edits, or discard the edits entirely. Neither ever moves HEAD or a branch — that's what makes it safer than <code>reset</code>.</h2>
+        </div>
+        <div class="scene" data-scene="restore-basics" data-layout="areas-basic" data-term="~/app"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6c — RESET SOFT / MIXED / HARD -->
+    <section class="slide" data-section="workspace → commit">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Core loop</span>
+          <h1 class="title"><code style="font-size:.85em;">git reset</code> — undo a commit, three ways</h1>
+          <h2 class="subtitle">Unlike <code>restore</code>, <code>reset</code> moves HEAD and the current branch pointer. The flag decides how much else it touches: just history (<code>--soft</code>), history and staging (<code>--mixed</code>, the default), or everything (<code>--hard</code>).</h2>
+        </div>
+        <div class="scene" data-scene="reset-basics" data-layout="areas-commit" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 7 — BRANCHING -->
     <section class="slide" data-section="branching">
       <div class="slide-inner">
@@ -926,7 +1025,7 @@ table.cmp code{ font-size:.85em; }
           <h1 class="title">Stash — a shelf beside the workspace</h1>
           <h2 class="subtitle">Need to switch branches with unfinished changes? <code>git stash</code> tucks your edits onto a stack without a commit. <code>git stash pop</code> brings them back.</h2>
         </div>
-        <div class="scene" data-scene="stash-flow" data-layout="areas-stash" data-term="~/app"></div>
+        <div class="scene" data-scene="stash-flow" data-layout="areas-stash-remote" data-term="~/app"></div>
       </div>
     </section>
 
@@ -1144,6 +1243,18 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 19b — RESTORE --SOURCE -->
+    <section class="slide" data-section="cherry-pick">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Beyond cherry-pick</span>
+          <h1 class="title">Just want <span class="accent-violet">one file</span> from another branch? Skip the commit entirely</h1>
+          <h2 class="subtitle">Cherry-pick copies a whole commit. <code>git restore --source</code> copies just a file's <i>content</i> from anywhere — no switch, no merge, no new commit, nothing for the graph to even show.</h2>
+        </div>
+        <div class="scene" data-scene="restore-source" data-layout="areas-commit" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 20 — REMOTE: FETCH / PULL / PUSH -->
     <section class="slide" data-section="remote & github">
       <div class="slide-inner">
@@ -1153,6 +1264,53 @@ table.cmp code{ font-size:.85em; }
           <h2 class="subtitle">The remote is just another repository — usually hosted on GitHub. <code>origin/main</code> is a local bookmark for "where I last saw their <code>main</code>."</h2>
         </div>
         <div class="scene" data-scene="remote-basic" data-layout="remote" data-term="~/app"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 20b — WHEN IS REBASE ACTUALLY NEEDED -->
+    <section class="slide" data-section="remote & github">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Local → Remote</span>
+          <h1 class="title">Fast-forward or rebase? It depends on <span class="accent-violet">who moved</span></h1>
+          <h2 class="subtitle">Neither is the default answer. Which one applies depends entirely on whether your branch has commits of its own since the last time you synced.</h2>
+        </div>
+        <div class="cols c2" style="flex:1;min-height:0;">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Only origin moved</div>
+            <p class="lead" style="margin-bottom:10px;">Nobody committed locally since the last sync — there's nothing of yours to preserve.</p>
+            <ul class="bullets compact">
+              <li>Fast-forward is <b>always</b> possible: Git just slides your branch pointer up to match.</li>
+              <li>A plain <code>git pull</code> (or <code>git merge origin/main</code>) does it — no flag, no new commit, nothing to decide.</li>
+              <li><code>--rebase</code> here would still "work," but there's nothing to replay — it's a no-op dressed up as a decision.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Both sides moved — diverged</div>
+            <p class="lead" style="margin-bottom:10px;">You have local commits <i>and</i> origin has commits you don't — a fast-forward is impossible.</p>
+            <ul class="bullets compact">
+              <li><b>Merge</b> (<code>git pull</code>, no flag): ties both histories together with a two-parent merge commit. Nothing rewritten.</li>
+              <li><b>Rebase</b> (<code>git pull --rebase</code>): replays your commits on top of origin's — linear history, but new hashes for every one of yours.</li>
+              <li>Rebase only if those commits are <b>yours alone</b> — never rebase commits someone else has already based work on.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span class="sw" style="background:var(--green)"></span>The rule</div>
+          <p class="lead"><code>git fetch</code> never changes your branch — it only updates <code>origin/main</code>. That makes it always safe to <b>look before deciding</b>. The next slide shows exactly which commands tell you which situation you're in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 20c — DETECTING DIVERGENCE AFTER FETCH -->
+    <section class="slide" data-section="remote & github">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Local → Remote</span>
+          <h1 class="title">After <code style="font-size:.85em;">git fetch</code>, how do you actually know?</h1>
+          <h2 class="subtitle"><code>git fetch</code> alone never changes your branch — so it's always safe to check first. <code>git status</code> and <code>git log</code> answer it directly, no guessing.</h2>
+        </div>
+        <div class="scene" data-scene="diverge-check" data-layout="remote" data-term="~/app"></div>
       </div>
     </section>
 
@@ -1329,8 +1487,8 @@ table.cmp code{ font-size:.85em; }
       <div class="slide-inner">
         <div class="slide-head">
           <span class="eyebrow violet">Test yourself</span>
-          <h1 class="title">30 questions — 20 core, 10 advanced</h1>
-          <h2 class="subtitle">Generic enough for a real interview screen: the first 20 gauge day-to-day fluency, the last 10 probe how a candidate handles history rewriting and recovery under pressure.</h2>
+          <h1 class="title">36 questions — 23 core, 13 advanced</h1>
+          <h2 class="subtitle">Generic enough for a real interview screen: the first 23 gauge day-to-day fluency, the last 13 probe how a candidate handles history rewriting and recovery under pressure.</h2>
         </div>
         <div class="quiz-app" data-quiz="main"></div>
       </div>
@@ -1352,22 +1510,36 @@ table.cmp code{ font-size:.85em; }
     <!-- SLIDES-MARKER -->
   </main>
 
-  <!-- Chrome / controls -->
-  <div class="chrome">
-    <div class="chrome-left">
+  <!-- Chrome / controls — a rail of progress dots always visible on the left edge;
+       expands in place into a full sidebar with slide/step names on hover -->
+  <div class="navzone" id="navZone"></div>
+  <nav class="chrome" id="chromeNav">
+    <div class="chrome-brand chrome-fade">
       <span class="brand">git<span class="brand-dot">·</span>log</span>
       <span class="section-tag" id="sectionTag">intro</span>
     </div>
-    <div class="chrome-mid" id="stepDots"></div>
-    <div class="chrome-right">
-      <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
-      <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+
+    <div class="chrome-count chrome-fade">
       <span class="slide-count"><span id="slideNum">1</span> / <span id="slideTotal">1</span></span>
       <span class="slide-count sub-count" id="subCount" style="display:none;"></span>
-      <button class="nav-btn" id="prevBtn" aria-label="Previous slide">‹</button>
-      <button class="nav-btn" id="nextBtn" aria-label="Next slide">›</button>
     </div>
-  </div>
+
+    <div>
+      <div class="chrome-label chrome-fade">Slides</div>
+      <div class="chrome-dots-wrap scroll-y" id="stepDots"></div>
+    </div>
+
+    <div class="chrome-subdots-wrap" id="subDots" style="display:none;"></div>
+
+    <div class="chrome-actions chrome-fade">
+      <button class="nav-btn" id="prevBtn" aria-label="Previous step or slide" title="Previous (←)">‹</button>
+      <button class="nav-btn" id="nextBtn" aria-label="Next step or slide" title="Next (→ / Space)">›</button>
+    </div>
+    <div class="chrome-actions chrome-fade">
+      <button class="chip-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+      <button class="chip-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+    </div>
+  </nav>
 
   <!-- Help overlay -->
   <div class="overlay" id="helpOverlay">
@@ -1416,30 +1588,46 @@ const Deck = {
     this.buildStepDots();
     this.goTo(0, true);
     this.wireEvents();
+    setupChromeHover();
     this.scale();
     window.addEventListener('resize', ()=>this.scale());
   },
 
   scale(){
     const vw = window.innerWidth, vh = window.innerHeight;
-    const pad = 90; // room for chrome bar
+    const pad = 24; // breathing room now that nav lives in a side sidebar, not a bottom bar
     const s = Math.min(vw/1280, (vh-pad)/720) ;
     document.getElementById('deck').style.transform = `translate(-50%,-50%) scale(${Math.max(s,0.32)})`;
   },
 
   buildStepDots(){
     const wrap = document.getElementById('stepDots');
-    wrap.innerHTML = this.slides.map((_,i)=>`<span class="stepdot" data-i="${i}"></span>`).join('');
+    wrap.innerHTML = '';
+    this.slides.forEach((slideEl,i)=>{
+      const name = slideDisplayName(slideEl, i);
+      const row = document.createElement('div');
+      row.className = 'dot-row';
+      row.dataset.i = i;
+      row.title = `${i+1}. ${name}`;
+      const dot = document.createElement('span'); dot.className = 'stepdot';
+      const label = document.createElement('span'); label.className = 'dot-label'; label.textContent = name;
+      row.appendChild(dot); row.appendChild(label);
+      row.addEventListener('click', ()=>this.goTo(i));
+      wrap.appendChild(row);
+    });
   },
 
   updateChrome(){
     document.getElementById('slideNum').textContent = this.idx+1;
     document.getElementById('progressFill').style.width = ((this.idx+1)/this.slides.length*100)+'%';
     document.getElementById('sectionTag').textContent = this.slides[this.idx].dataset.section || '';
-    const dots = document.querySelectorAll('.stepdot');
-    dots.forEach((d,i)=>{
-      d.classList.toggle('done', i < this.idx);
-      d.classList.toggle('current', i === this.idx);
+    document.querySelectorAll('#stepDots .dot-row').forEach((row,i)=>{
+      const done = i < this.idx, current = i === this.idx;
+      row.classList.toggle('current', current);
+      const dot = row.querySelector('.stepdot');
+      dot.classList.toggle('done', done);
+      dot.classList.toggle('current', current);
+      if(current) row.scrollIntoView({block:'nearest'});
     });
     this.updateSubCounter();
   },
@@ -1447,8 +1635,10 @@ const Deck = {
   updateSubCounter(){
     const sub = document.getElementById('subCount');
     if(!sub) return;
+    const subDots = document.getElementById('subDots');
+    const clearSubDots = ()=>{ if(subDots){ subDots.style.display='none'; subDots.innerHTML=''; delete subDots.dataset.for; } };
     const s = this.slides[this.idx];
-    if(!s){ sub.style.display='none'; return; }
+    if(!s){ sub.style.display='none'; clearSubDots(); return; }
     const sceneEl = s.querySelector('[data-scene]');
     const quizEl = s.querySelector('[data-quiz]');
     if(sceneEl){
@@ -1457,9 +1647,42 @@ const Deck = {
         const step = Math.max(0, scene.idx+1);
         sub.textContent = `Step ${step} / ${scene.frames.length}`;
         sub.style.display = 'inline-block';
+        if(subDots){
+          const key = sceneEl.dataset.scene;
+          if(subDots.dataset.for !== key){
+            subDots.dataset.for = key;
+            subDots.innerHTML = '';
+            scene.frames.forEach((f,i)=>{
+              const name = frameCaptionText(f.cap) || `Step ${i+1}`;
+              const row = document.createElement('div');
+              row.className = 'subdot-row';
+              row.dataset.i = i;
+              row.title = `Step ${i+1}: ${name}`;
+              const dot = document.createElement('span'); dot.className = 'subdot';
+              const label = document.createElement('span'); label.className = 'subdot-label'; label.textContent = name;
+              row.appendChild(dot); row.appendChild(label);
+              row.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                scene.goToFrame(i);
+                this.updateSubCounter();
+              });
+              subDots.appendChild(row);
+            });
+          }
+          subDots.querySelectorAll('.subdot-row').forEach((row,i)=>{
+            const done = i < scene.idx, current = i === scene.idx;
+            row.classList.toggle('current', current);
+            const dot = row.querySelector('.subdot');
+            dot.classList.toggle('done', done);
+            dot.classList.toggle('current', current);
+            if(current) row.scrollIntoView({block:'nearest'});
+          });
+          subDots.style.display = 'flex';
+        }
         return;
       }
     }
+    clearSubDots();
     if(quizEl){
       const quiz = this.quizzes.get(quizEl);
       if(quiz){
@@ -1495,7 +1718,24 @@ const Deck = {
     }
     if(this.idx < this.slides.length-1) this.goTo(this.idx+1);
   },
-  prev(){ if(this.idx>0) this.goTo(this.idx-1); },
+
+  prev(){
+    // if current slide has a scene mid-way through its steps, step it back first
+    const s = this.slides[this.idx];
+    const sceneEl = s.querySelector('[data-scene]');
+    if(sceneEl){
+      const scene = Deck.scenes.get(sceneEl);
+      if(scene && scene.idx > 0){ scene.goToFrame(scene.idx-1); return; }
+    }
+    if(this.idx <= 0) return;
+    this.goTo(this.idx-1);
+    // land on the previous slide's last step, mirroring how next() always starts a slide at step 1
+    const prevSceneEl = this.slides[this.idx].querySelector('[data-scene]');
+    if(prevSceneEl){
+      const prevScene = this.scenes.get(prevSceneEl);
+      if(prevScene && prevScene.frames.length) prevScene.goToFrame(prevScene.frames.length-1);
+    }
+  },
 
   activateScenesIn(slideEl){
     const wrappers = slideEl.querySelectorAll('[data-scene]');
@@ -1579,6 +1819,48 @@ function showHelp(show){
   document.getElementById('helpOverlay').classList.toggle('show', show);
 }
 
+/* sidebar nav: a dot rail stays visible against the left edge; it widens in
+   place — revealing slide/step names — when the mouse is near it or over it */
+function setupChromeHover(){
+  const zone = document.getElementById('navZone');
+  const chrome = document.getElementById('chromeNav');
+  if(!zone || !chrome) return;
+  let closeTimer = null;
+  function open(){
+    clearTimeout(closeTimer);
+    chrome.classList.add('open');
+  }
+  function scheduleClose(){
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(()=>chrome.classList.remove('open'), 260);
+  }
+  zone.addEventListener('mouseenter', open);
+  zone.addEventListener('mouseleave', scheduleClose);
+  chrome.addEventListener('mouseenter', open);
+  chrome.addEventListener('mouseleave', scheduleClose);
+  // brief peek on load so the sidebar's presence is discoverable
+  open();
+  closeTimer = setTimeout(scheduleClose, 1800);
+}
+
+/* human-readable name for a slide: its heading text, falling back to the
+   title slide's wordmark, then its section tag */
+function slideDisplayName(slideEl, i){
+  const h1 = slideEl.querySelector('h1.title');
+  if(h1) return h1.textContent.trim().replace(/\s+/g,' ');
+  const wordmark = slideEl.querySelector('.title-wordmark');
+  if(wordmark) return wordmark.textContent.trim().replace(/\s+/g,' ');
+  return slideEl.dataset.section || ('Slide ' + (i+1));
+}
+
+/* plain-text version of a scene frame's (HTML) caption, for a subslide label */
+function frameCaptionText(cap){
+  if(!cap) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = cap;
+  return tmp.textContent.trim().replace(/\s+/g,' ');
+}
+
 /* ============================= SCENE TEMPLATE BUILDER ============================= */
 function sceneTemplate(layout, ds){
   const areaBoxes = {
@@ -1627,14 +1909,20 @@ function sceneTemplate(layout, ds){
   if(layout==='areas-basic') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.staging}</div>`;
   else if(layout==='areas-commit') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.staging}</div>${localGraphSmall}`;
   else if(layout==='areas-stash') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.stash}</div>`;
+  else if(layout==='areas-stash-remote') top = `<div class="areas">${areaBoxes.workspace}${areaBoxes.stash}</div><div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
   else if(layout==='graph') top = localGraph;
   else if(layout==='graph-conflict') top = `<div class="cols c2-wide" style="flex:1;min-height:0;">${localGraph}${conflictBox}</div>`;
   else if(layout==='remote') top = `<div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
   else if(layout==='full') top = `<div class="areas with-stash">${areaBoxes.workspace}${areaBoxes.staging}${areaBoxes.stash}<div class="area local"><div class="area-head"><span class="sw"></span>Local (HEAD)</div><div class="area-body local-list"></div></div><div class="area remote"><div class="area-head"><span class="sw"></span>Remote</div><div class="area-body remote-list"></div></div></div>`;
 
+  // wider layouts (nested side-by-side panels, or 5-up areas) need more room for the chart side
+  const topFlex = (layout==='graph-conflict' || layout==='remote' || layout==='areas-stash-remote') ? 1.7 : (layout==='full' ? 1.5 : 1.15);
+
   return `<div class="scene-grid" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">
-    <div class="scene-top" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">${top}</div>
-    ${terminal}
+    <div class="scene-row" style="flex:1;min-height:0;display:flex;flex-direction:row;gap:16px;">
+      <div class="scene-top" style="flex:${topFlex};min-height:0;display:flex;flex-direction:column;gap:10px;">${top}</div>
+      <div class="scene-code" style="flex:1;min-height:0;display:flex;flex-direction:column;">${terminal}</div>
+    </div>
     ${stepbar}
   </div>`;
 }
@@ -1700,6 +1988,15 @@ class Scene{
       this.playTimer = setTimeout(step, 1450);
     };
     step();
+  }
+
+  // jump directly to a given frame — frames are cumulative diffs, so going
+  // backward (or to frame 0) has to replay from the start
+  goToFrame(target){
+    clearTimeout(this.playTimer); this.playTimer=null;
+    target = Math.max(0, Math.min(target, this.frames.length-1));
+    if(target < this.idx) this.reset();
+    while(this.idx < target) this.stepForward();
   }
 
   applyFrame(f){
@@ -2047,7 +2344,7 @@ const GIT_DOCS = {
   },
   restore: {
     desc:'Restores files — either discarding working-directory changes, or unstaging them, depending on the flag.',
-    flags:{ '--staged': 'Unstage the given file(s) — undoes a git add — without touching their actual contents in the working directory.' }
+    flags:{ '--staged': 'Unstage the given file(s) — undoes a git add — without touching their actual contents in the working directory.', '--source': 'Read the file\'s content from a specific branch or commit instead of the index — copies it into the workspace without switching, merging, or creating a commit.' }
   },
   revert: {
     desc:'Undoes the changes from a specific commit by creating a brand-new commit that applies the inverse diff. History stays intact, which makes it the safe way to undo something that\'s already been shared/pushed.',
@@ -2358,8 +2655,17 @@ const QUIZ_DATA = [
   { level:'basic', topic:'Safe branch delete', q:'What does <code>git branch -d feature-x</code> (lowercase -d) refuse to do?',
     choices:['Delete a branch that\'s already merged','Delete a branch with unmerged work that would become unreachable','Delete any branch, ever','Rename the branch'], correct:1,
     explain:'The safe-delete flag checks first — if deleting would orphan commits, Git blocks it. -D force-deletes anyway.' },
+  { level:'basic', topic:'restore (discard)', q:'What does plain <code>git restore &lt;file&gt;</code> — no flag — do?',
+    choices:['Unstages the file without touching its content','Discards uncommitted changes in the working directory, reverting the file to match HEAD','Deletes the file from the repository entirely','Copies the file\'s content from another branch'], correct:1,
+    explain:'With no <code>--staged</code>, restore throws away working-directory edits — the destructive one of the two, and the opposite of <code>--staged</code>.' },
+  { level:'basic', topic:'commit --amend', q:'What does <code>git commit --amend</code> do?',
+    choices:['Creates a brand-new commit on top of the last one','Replaces the most recent commit with a new one, folding in whatever\'s currently staged and/or a new message','Renames the current branch','Squashes the last 3 commits into one'], correct:1,
+    explain:'Amend rewrites the tip commit in place — a lighter one-step alternative to <code>reset --soft</code> plus a recommit, for that single commit.' },
+  { level:'basic', topic:'Fast-forward or diverged?', q:'After <code>git fetch</code>, how do you know whether a plain pull will fast-forward or need a merge/rebase?',
+    choices:['You can\'t know until you try the pull','git status reports it directly — "behind, can be fast-forwarded" vs. "have diverged, and have X and Y commits"','Always assume it has diverged','Check the file sizes on each side'], correct:1,
+    explain:'git fetch never changes your branch, so it\'s always safe to check first — git status (or a two-dot git log range) says exactly which situation you\'re in.' },
 
-  // ---------------- ADVANCED (10) ----------------
+  // ---------------- ADVANCED (13) ----------------
   { level:'advanced', topic:'Merge vs rebase history', q:'Fundamentally, how do merge and rebase differ in how they handle history?',
     choices:['Merge rewrites commits; rebase never does','Merge preserves both branches\' commits and joins them; rebase rewrites your commits onto a new base, changing their hashes','They produce byte-identical results','Rebase always creates more commits than merge'], correct:1,
     explain:'Merge is additive and non-destructive. Rebase replays — and rewrites — your commits, which is powerful but changes history.' },
@@ -2390,6 +2696,15 @@ const QUIZ_DATA = [
   { level:'advanced', topic:'Why squash merge has one parent', q:'Why does <code>git merge --squash</code> NOT record the feature branch as a parent of the resulting commit?',
     choices:['It\'s a bug in Git','It only borrows the combined diff — it deliberately doesn\'t merge the branch\'s history, just its content','Squash merges are never committed','GitHub blocks it'], correct:1,
     explain:'That\'s the whole point of squash merge: adopt the code, not the branch\'s commit history.' },
+  { level:'advanced', topic:'restore --source', q:'What does <code>git restore --source=release -- config.py</code> do while you\'re on <code>main</code>?',
+    choices:['Switches to the release branch','Merges release into main','Copies just that file\'s content from release into your workspace — no switch, no merge, no new commit','Deletes config.py from the release branch'], correct:2,
+    explain:'It\'s a workspace-only operation — the commit graph never moves. Compare to cherry-pick, which copies an entire commit.' },
+  { level:'advanced', topic:'Stash indices are LIFO', q:'You stash uncommitted work twice in a row — first "feature work," later "config tweak." What is <code>stash@{1}</code> now?',
+    choices:['The config tweak, since it was stashed second','The feature work — indices are LIFO, so the newest push is always @{0}, and everything older shifts up by one','There\'s no way to tell without running git stash list first','Whichever stash touches more files'], correct:1,
+    explain:'Stash is newest-first, just like the reflog: @{0} is always the most recent push, so an older stash silently moves from @{0} to @{1} once a new one lands on top of it.' },
+  { level:'advanced', topic:'amend vs reset --soft', q:'For undoing just the single most recent commit, <code>git commit --amend</code> is functionally closest to which reset flavor, followed by a recommit?',
+    choices:['--hard','--mixed','--soft','None of them — amend is unrelated to reset'], correct:2,
+    explain:'--soft moves HEAD back but leaves everything fully staged — recommitting right away reproduces exactly what amend does in one step, for that one commit.' },
 ];
 
 class QuizController{
@@ -2553,7 +2868,7 @@ S['mental-model'] = { frames: [
     term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'} ] },
   { cap: "④ <b>Stash</b> — a side shelf for uncommitted work you're not ready to commit (it never enters history).",
     areas: { stash: ['stash@{0}: WIP on main: quick experiment'] },
-    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git stash'} ] },
+    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'out', text:"# after that commit, you start a quick experiment in app.py — edits you don't want to commit yet"}, {type:'cmd', text:'git stash'} ] },
   { cap: "⑤ <b>Remote</b> — a copy of this repository hosted elsewhere, like GitHub. <code>git push</code> sends commits there.",
     areas: { remote: [{id:'a1b2c3d — add app.py',status:'clean'}] },
     term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git stash'}, {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   (new) -> main'} ] },
@@ -2588,6 +2903,62 @@ S['workspace-to-commit'] = { frames: [
              {type:'cmd', text:'git log --oneline'}, {type:'out', text:'9f0c21a (HEAD -> main) fix: paginate with offset\na1a001 init'} ] },
 ]};
 
+/* ---------------------------------------------------------- restore-basics */
+S['restore-basics'] = { frames: [
+  { cap: "Two files are in progress — <code>app.py</code> is ready to commit, <code>scratch.py</code> is just an experiment.",
+    areas: { workspace:[{id:'app.py',status:'modified'},{id:'scratch.py',status:'modified'}], staging:[] },
+    term: [] },
+  { cap: "<code>git add</code> stages both — but <code>scratch.py</code> wasn't meant to be included.",
+    areas: { workspace:[], staging:[{id:'app.py',status:'modified'},{id:'scratch.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git add app.py scratch.py'} ] },
+  { cap: "Caught it before committing: <code>git restore --staged</code> unstages <code>scratch.py</code> — back to the workspace, its edits completely untouched.",
+    areas: { workspace:[{id:'scratch.py',status:'modified'}], staging:[{id:'app.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git restore --staged scratch.py'}, {type:'out', text:'On branch main\nChanges to be committed:\n  <span class="o-green">modified:</span>   app.py\nChanges not staged for commit:\n  <span class="o-amber">modified:</span>   scratch.py'} ] },
+  { cap: "Actually, <code>scratch.py</code>'s edits aren't worth keeping at all. <code>git restore</code> with <b>no flag</b> discards a working-directory change outright — reverts the file to match the last commit. Unlike <code>--staged</code>, this one is destructive.",
+    areas: { workspace:[] },
+    term: [ {type:'cmd', text:'git restore scratch.py'}, {type:'out', text:'# scratch.py reverted to match HEAD — the edit is gone for good'} ] },
+  { cap: "<code>app.py</code> — the one you actually meant to commit — was never touched by any of this. Commit it.",
+    areas: { staging:[] },
+    term: [ {type:'cmd', text:'git commit -m "app: fix pagination"'}, {type:'out', text:'[main 9f0c21a] app: fix pagination\n 1 file changed, 1 insertion(+), 1 deletion(-)'} ] },
+]};
+
+/* ----------------------------------------------------------- reset-basics */
+S['reset-basics'] = { frames: [
+  { cap: "You stage and commit a first pass at the feature — a bit too quickly.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'feat: A'}], branches:[{name:'main',commitId:'f1a002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git add feature.py'}, {type:'cmd', text:'git commit -m "feat: A"'}, {type:'out', text:'[main f1a002] feat: A'} ] },
+  { cap: "On reflection, the message (and maybe the split) needs work. <code>git reset --soft HEAD~1</code> undoes just the <b>commit</b> — HEAD moves back, but everything stays fully staged, exactly as if you'd just run <code>git add</code>.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true}], branches:[{name:'main',commitId:'a1a001',color:'blue'}] },
+    areas: { staging:[{id:'feature.py',status:'modified'}], workspace:[] },
+    term: [ {type:'cmd', text:'git reset --soft HEAD~1'}, {type:'out', text:'# HEAD -> a1a001, but the index still holds everything from feat: A'} ] },
+  { cap: "Nothing lost — tweak the message and commit again, deliberately.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'}], branches:[{name:'main',commitId:'f2b003',color:'green'}] },
+    areas: { staging:[] },
+    term: [ {type:'cmd', text:'git commit -m "feat: A — cleaner commit"'}, {type:'out', text:'[main f2b003] feat: A — cleaner commit'} ] },
+  { cap: "For a fix this simple — same content, just a better message — <code>reset --soft</code> plus a recommit was overkill. <code>git commit --amend</code> gets there in <b>one</b> command, replacing the tip commit directly. Reset earns its keep for what amend can't do: splitting one commit into several, or changing what's staged before recommitting.",
+    term: [ {type:'out', text:'# equivalent one-liner for this exact case:'}, {type:'cmd', text:'git commit --amend -m "feat: A — cleaner commit"'} ] },
+  { cap: "Another commit — this time you want to reorganize before it's official.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:0,order:2,color:'green',label:'feat: B'}], branches:[{name:'main',commitId:'f3c004',color:'green'}] },
+    term: [ {type:'cmd', text:'git add reports.py'}, {type:'cmd', text:'git commit -m "feat: B"'}, {type:'out', text:'[main f3c004] feat: B'} ] },
+  { cap: "<code>git reset --mixed HEAD~1</code> — the default, so plain <code>git reset HEAD~1</code> does the same — undoes the commit <b>and</b> unstages it, but the edits stay put in your working directory.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true}], branches:[{name:'main',commitId:'f2b003',color:'green'}] },
+    areas: { workspace:[{id:'reports.py',status:'modified'}], staging:[] },
+    term: [ {type:'cmd', text:'git reset --mixed HEAD~1'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   reports.py\n<span class="o-dim">no changes added to commit</span>'} ] },
+  { cap: "Re-stage — maybe only part of it this time — and commit again, on purpose.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'}], branches:[{name:'main',commitId:'f4d005',color:'amber'}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git add reports.py'}, {type:'cmd', text:'git commit -m "feat: B — reworked"'}, {type:'out', text:'[main f4d005] feat: B — reworked'} ] },
+  { cap: "One more commit — this one turns out to be the wrong approach entirely.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'},{id:'f5e006',parents:['f4d005'],lane:0,order:3,color:'red',label:'feat: C — wrong approach'}], branches:[{name:'main',commitId:'f5e006',color:'red'}] },
+    term: [ {type:'cmd', text:'git add scratch_approach.py'}, {type:'cmd', text:'git commit -m "feat: C — wrong approach"'}, {type:'out', text:'[main f5e006] feat: C — wrong approach'} ] },
+  { cap: "Not worth keeping any part of it. <code>git reset --hard HEAD~1</code> undoes the commit <b>and</b> wipes both the staging area and the working directory — the most destructive of the three.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'},{id:'f5e006',parents:['f4d005'],lane:1,order:3,color:'red',label:'feat: C — wrong approach',ghost:true}], branches:[{name:'main',commitId:'f4d005',color:'amber'}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git reset --hard HEAD~1'}, {type:'out', text:'HEAD is now at f4d005 feat: B — reworked'} ] },
+  { cap: "Even after <code>--hard</code>, the commit itself isn't instantly gone — <code>git reflog</code> still lists <code>f5e006</code>, recoverable until Git's garbage collector eventually prunes it. What <code>--hard</code> truly destroys with no undo is <b>uncommitted</b> work — edits that were never in a commit to begin with.",
+    term: [ {type:'cmd', text:'git reflog'}, {type:'out', text:'f4d005 HEAD@{0}: reset: moving to HEAD~1\nf5e006 HEAD@{1}: commit: feat: C — wrong approach\nf4d005 HEAD@{2}: commit: feat: B — reworked'} ] },
+]};
+
 /* ------------------------------------------------------------- branching */
 S['branching'] = { frames: [
   { cap: "Three commits on <b>main</b>.",
@@ -2610,34 +2981,66 @@ S['branching'] = { frames: [
       {id:'d40a2c',parents:['c3f001'],lane:1,order:3,color:'green',label:'wip: query parser'},{id:'e51b3d',parents:['d40a2c'],lane:1,order:4,color:'green',label:'wip: ranking'}],
       branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'}], head:{type:'branch',ref:'feature/search'} },
     term: [ {type:'cmd', text:'git commit -m "wip: ranking"'} ] },
-  { cap: "<code>git switch -c</code> does both steps <i>at once</i>: create the pointer <b>and</b> move HEAD there, in a single command.",
+  { cap: "HEAD is still on <code>feature/search</code>. <code>switch</code> only moves HEAD when you tell it to — so back to <code>main</code> first, deliberately, before branching a hotfix off of it.",
+    local: { head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
+  { cap: "<code>git switch -c</code> does both steps <i>at once</i>: create the pointer <b>and</b> move HEAD there, in a single command — branching <code>hotfix/typo</code> off <code>main</code>, since that's where HEAD is <i>now</i>.",
     local: { branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'},{name:'hotfix/typo',commitId:'c3f001',color:'red',stack:1}], head:{type:'branch',ref:'hotfix/typo'} },
     term: [ {type:'cmd', text:'git switch -c hotfix/typo'}, {type:'out', text:"Switched to a new branch 'hotfix/typo'"} ] },
 ]};
 
 /* --------------------------------------------------------------- stash */
 S['stash-flow'] = { frames: [
-  { cap: "You're mid-edit on two files, and need to urgently switch branches.",
+  { cap: "You're mid-edit on two files on <code>main</code>, and an urgent bug on another branch needs attention right now.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'violet'}] },
     areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}], stash:[] },
     term: [] },
-  { cap: "<code>git stash</code> shelves both changes and returns the workspace to a clean, HEAD-matching state.",
-    areas: { workspace:[], stash:['stash@{0}: WIP on main: 9f0c21a fix: paginate offset'] },
-    term: [ {type:'cmd', text:'git stash'}, {type:'out', text:'Saved working directory and index state WIP on main: 9f0c21a fix: paginate offset'} ] },
-  { cap: "<code>git stash list</code> shows everything shelved — you can stack up more than one.",
-    term: [ {type:'cmd', text:'git stash'}, {type:'out', text:'Saved working directory and index state WIP on main: 9f0c21a fix: paginate offset'},
-             {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: WIP on main: 9f0c21a fix: paginate offset'} ] },
-  { cap: "Urgent work done, back on <code>main</code>: <code>git stash pop</code> restores your changes <b>and</b> removes them from the stash.",
-    areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}], stash:[] },
-    term: [ {type:'cmd', text:'git stash pop'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py\nDropped stash@{0}'} ] },
-  { cap: "<code>git stash apply</code> restores the same way but <b>keeps</b> the entry — handy to apply it on more than one branch. <code>git stash drop</code> discards an entry outright.",
-    term: [ {type:'cmd', text:'git stash apply stash@{0}'}, {type:'out', text:'# same restore, but the stash entry stays in the stack'} ] },
+  { cap: "<code>git stash push -m \"…\"</code> shelves both changes under a label, and returns the workspace to a clean, HEAD-matching state.",
+    areas: { workspace:[], stash:['stash@{0}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash push -m "search feature wip"'}, {type:'out', text:'Saved working directory and index state On main: search feature wip'} ] },
+  { cap: "Workspace is clean, so it's safe to switch — Git would refuse the switch if uncommitted changes conflicted with the target branch. <code>git switch -c</code> creates the hotfix branch and moves there in one step.",
+    local: { branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'a1a001',color:'red',stack:1}], head:{type:'branch',ref:'hotfix/urgent-payment-bug'} },
+    term: [ {type:'cmd', text:'git switch -c hotfix/urgent-payment-bug'}, {type:'out', text:"Switched to a new branch 'hotfix/urgent-payment-bug'"} ] },
+  { cap: "Track down and fix the race condition in <code>payment.py</code> — this is the actual bug work, still uncommitted.",
+    areas: { workspace:[{id:'payment.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'vim payment.py'} ] },
+  { cap: "Commit it directly on <code>hotfix/urgent-payment-bug</code> — completely unrelated to the shelved work.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'h1a002',parents:['a1a001'],lane:1,order:1,color:'red',label:'fix: payment race condition'}],
+             branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'red'}] },
+    areas: { workspace:[] },
+    term: [ {type:'cmd', text:'git commit -am "fix: payment race condition"'}, {type:'out', text:'[hotfix/urgent-payment-bug h1a002] fix: payment race condition\n 1 file changed, 3 insertions(+), 1 deletion(-)'} ] },
+  { cap: "Push the fix — now the remote knows about it too — then switch back to <code>main</code>. The stash isn't tied to any branch, so it's still sitting there waiting.",
+    local: { head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'h1a002',parents:['a1a001'],lane:1,order:1,color:'violet',label:'fix: payment race condition'}],
+              branches:[{name:'main',commitId:'a1a001',color:'violet'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git push origin hotfix/urgent-payment-bug'}, {type:'out', text:"Create a pull request for 'hotfix/urgent-payment-bug' by visiting…"}, {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"} ] },
+  { cap: "Before returning to the shelved feature, a small unrelated tweak comes up on <code>main</code> too.",
+    areas: { workspace:[{id:'config.yml',status:'modified'}] },
+    term: [ {type:'cmd', text:'vim config.yml'} ] },
+  { cap: "Stash it separately rather than mixing it with the first — now two shelves exist. Indices are <b>LIFO</b>: the newest is always <code>@{0}</code>, so the search-feature stash you pushed first just shifted from <code>@{0}</code> to <code>@{1}</code>.",
+    areas: { workspace:[], stash:['stash@{0}: On main: config tweak','stash@{1}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash push -m "config tweak"'}, {type:'out', text:'Saved working directory and index state On main: config tweak'} ] },
+  { cap: "The config tweak turns out to be quick — pop it right back out (it's on top, no index needed) and commit it before returning to the shelved feature.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m9d003',parents:['a1a001'],lane:0,order:2,color:'blue',label:'tweak config'}],
+             branches:[{name:'main',commitId:'m9d003',color:'blue'},{name:'hotfix/urgent-payment-bug',commitId:'h1a002',color:'red'}] },
+    areas: { workspace:[], stash:['stash@{0}: On main: search feature wip'] },
+    term: [ {type:'cmd', text:'git stash pop'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   config.yml\nDropped stash@{0}'}, {type:'cmd', text:'git commit -am "tweak config"'}, {type:'out', text:'[main m9d003] tweak config'} ] },
+  { cap: "Popping the top entry reindexes the rest automatically — the search-feature stash is back to being the only one, so it's <code>@{0}</code> again. <code>git stash list</code> confirms it before touching anything.",
+    term: [ {type:'cmd', text:'git stash list'}, {type:'out', text:'stash@{0}: On main: search feature wip'} ] },
+  { cap: "<code>git stash apply stash@{0}</code> restores it, by name, matching what the list just showed — <code>apply</code> (unlike <code>pop</code>) leaves it on the stack too, in case it's needed on another branch.",
+    areas: { workspace:[{id:'app.py',status:'modified'},{id:'utils.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git stash apply stash@{0}'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   app.py\n  <span class="o-amber">modified:</span>   utils.py'} ] },
+  { cap: "Once the restored work is confirmed, <code>git stash drop stash@{0}</code> removes it for good — the stack is empty again.",
+    areas: { stash:[] },
+    term: [ {type:'cmd', text:'git stash drop stash@{0}'}, {type:'out', text:'Dropped stash@{0} (c9a2b1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0)'} ] },
 ]};
 
 /* ---------------------------------------------------------- fast-forward */
 S['ff-merge'] = { frames: [
-  { cap: "<code>main</code> and <code>feature/ui</code> start at the same commit.",
-    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'a1a001',color:'green',stack:1}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'cmd', text:'git switch -c feature/ui'} ] },
+  { cap: "<code>main</code> and <code>feature/ui</code> start at the same commit. <code>git switch -c</code> creates the branch <b>and</b> moves HEAD there immediately, in one step.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'a1a001',color:'green',stack:1}], head:{type:'branch',ref:'feature/ui'} },
+    term: [ {type:'cmd', text:'git switch -c feature/ui'}, {type:'out', text:"Switched to a new branch 'feature/ui'"} ] },
   { cap: "A commit lands on <code>feature/ui</code>. <code>main</code> hasn't moved.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'restyle nav'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/ui',commitId:'b2c002',color:'green'}], head:{type:'branch',ref:'feature/ui'} },
@@ -2667,11 +3070,11 @@ S['threeway-merge'] = { frames: [
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "add validation"'} ] },
-  { cap: "Meanwhile, <code>main</code> kept moving too.",
+  { cap: "Meanwhile, <i>we</i> switch back to <code>main</code> and keep working there too — <code>feature/api</code> is left exactly as it was.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'},
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'}],
       branches:[{name:'main',commitId:'f60110',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'out', text:'# meanwhile, on main…'}, {type:'cmd', text:'git commit -m "fix cors"'} ] },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"}, {type:'cmd', text:'git commit -m "fix cors"'} ] },
   { cap: "...twice.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4c010',parents:['a1a001'],lane:1,order:1,color:'green',label:'add endpoint'},{id:'e5f0aa',parents:['d4c010'],lane:1,order:2,color:'green',label:'add validation'},
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'},{id:'a7c220',parents:['f60110'],lane:0,order:2,color:'blue',label:'bump deps'}],
@@ -2682,7 +3085,7 @@ S['threeway-merge'] = { frames: [
       {id:'f60110',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix cors'},{id:'a7c220',parents:['f60110'],lane:0,order:2,color:'blue',label:'bump deps'},
       {id:'b8d331',parents:['a7c220','e5f0aa'],lane:0,order:3,color:'blue',label:"Merge feature/api"}],
       branches:[{name:'main',commitId:'b8d331',color:'blue'},{name:'feature/api',commitId:'e5f0aa',color:'green'}], head:{type:'branch',ref:'main'} },
-    term: [ {type:'cmd', text:'git switch main'}, {type:'cmd', text:'git merge feature/api'}, {type:'out', text:"Merge made by the 'ort' strategy.\n 2 files changed, 12 insertions(+)"} ] },
+    term: [ {type:'cmd', text:'git merge feature/api'}, {type:'out', text:"Merge made by the 'ort' strategy.\n 2 files changed, 12 insertions(+)"} ] },
 ]};
 
 /* --------------------------------------------------------------- rebase */
@@ -2698,11 +3101,14 @@ S['rebase-basic'] = { frames: [
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export'},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export'}],
              branches:[{name:'main',commitId:'a1a001',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "pdf export"'} ] },
-  { cap: "Meanwhile main advanced twice, independently.",
+  { cap: "Meanwhile, <i>we</i> switch to <code>main</code> and keep working there too — <code>feature/reports</code> is left exactly as it was.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export'},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export'},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'}],
-      branches:[{name:'main',commitId:'f2d534',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}], head:{type:'branch',ref:'feature/reports'} },
-    term: [ {type:'out', text:'# meanwhile, on main…'}, {type:'cmd', text:'git commit -m "perf: cache"'}, {type:'cmd', text:'git commit -m "fix: null check"'} ] },
+      branches:[{name:'main',commitId:'f2d534',color:'blue'},{name:'feature/reports',commitId:'d0b312',color:'green'}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git switch main'}, {type:'out', text:"Switched to branch 'main'"}, {type:'cmd', text:'git commit -m "perf: cache"'}, {type:'cmd', text:'git commit -m "fix: null check"'} ] },
+  { cap: "Back on <code>feature/reports</code> — this is the branch about to be rebased, so HEAD needs to be here first.",
+    local: { head:{type:'branch',ref:'feature/reports'} },
+    term: [ {type:'cmd', text:'git switch feature/reports'}, {type:'out', text:"Switched to branch 'feature/reports'"} ] },
   { cap: "<code>git rebase main</code>: Git sets feature's commits aside and prepares to replay them, one by one, on top of main's new tip.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export',ghost:true},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export',ghost:true},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'}],
@@ -2714,8 +3120,8 @@ S['rebase-basic'] = { frames: [
       {id:'a3e645',parents:['f2d534'],lane:0,order:3,color:'green',label:'csv export'}],
       branches:[{name:'feature/reports',commitId:'a3e645',color:'green'},{name:'main',commitId:'f2d534',color:'blue'}] },
     term: [ {type:'out', text:'Applying: csv export'} ] },
-  { cap: "Commit 2 replayed the same way. The old two commits are now unreachable and will be garbage-collected — <code>feature/reports</code> points only at the new chain.",
-    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},
+  { cap: "Commit 2 replayed the same way — <code>feature/reports</code> now points only at the new chain. The old two commits aren't reachable from <b>any</b> branch, but they're not deleted: <code>git reflog</code> still lists them, recoverable if something goes wrong. Only later, once nothing points to them and Git's garbage collector eventually runs, do they actually get pruned.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export',ghost:true},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export',ghost:true},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'},
       {id:'a3e645',parents:['f2d534'],lane:0,order:3,color:'green',label:'csv export'},{id:'b4f756',parents:['a3e645'],lane:0,order:4,color:'green',label:'pdf export'}],
       branches:[{name:'feature/reports',commitId:'b4f756',color:'green'},{name:'main',commitId:'f2d534',color:'blue'}] },
@@ -2767,19 +3173,25 @@ S['squash-rebase'] = { frames: [
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'77df02',color:'green'}] },
     term: [ {type:'cmd', text:'git commit -m "wip 3 (typo)"'} ],
     conflict: '' },
-  { cap: "<code>git rebase -i HEAD~3</code> opens an editor listing those 3 commits, oldest first. Changing <code>pick</code> to <code>squash</code> folds a commit into the one above it.",
+  { cap: "<code>git rebase -i HEAD~3</code> opens an editor listing the last 3 commits, oldest first. Every line defaults to <code>pick</code> — keep as-is.",
     term: [ {type:'cmd', text:'git rebase -i HEAD~3'} ],
-    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw">squash</span> 9b1240 wip 2\n<span class="c-kw">squash</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># Rebase c1a001..77df02 onto c1a001</span>\n<span class="c-com">#</span>\n<span class="c-com"># p, pick &lt;commit&gt;  = use commit</span>\n<span class="c-com"># s, squash &lt;commit&gt; = use commit, meld into previous</span>\n<span class="c-com"># f, fixup &lt;commit&gt;  = like squash, discard this message</span>' },
-  { cap: "Saving triggers the fold — Git rewinds and prepares to replay + merge the three into one.",
+    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw">pick</span> 9b1240 wip 2\n<span class="c-kw">pick</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># Rebase c1a001..77df02 onto c1a001</span>\n<span class="c-com">#</span>\n<span class="c-com"># Commands:</span>\n<span class="c-com"># p, pick &lt;commit&gt;   = use commit</span>\n<span class="c-com"># s, squash &lt;commit&gt; = use commit, meld into previous commit</span>\n<span class="c-com"># f, fixup &lt;commit&gt;  = like squash, but discard this commit\'s message</span>\n<span class="c-com"># d, drop &lt;commit&gt;   = remove commit</span>' },
+  { cap: "It's a normal text file — you edit it yourself. Change <code>pick</code> to <code>squash</code> on the two lines you want folded into the one above them.",
+    term: [ {type:'cmd', text:'git rebase -i HEAD~3'}, {type:'out', text:'# editing the todo list…'} ],
+    conflict: '<span class="c-kw">pick</span> a2c114 wip\n<span class="c-kw" style="color:var(--amber)">squash</span> 9b1240 wip 2\n<span class="c-kw" style="color:var(--amber)">squash</span> 77df02 wip 3 (typo)\n\n<span class="c-com"># squash 9b1240 → melds into a2c114, combining both messages</span>\n<span class="c-com"># squash 77df02 → melds into that result too — all three become one</span>' },
+  { cap: "Save and quit the todo list — in Vim that's <kbd>Esc</kbd> then <code>:wq</code>. That save is what tells Git to act: it rewinds to <code>c1a001</code> and starts replaying the list top to bottom.",
     local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'a2c114',parents:['c1a001'],lane:1,order:1,color:'green',label:'wip',ghost:true},{id:'9b1240',parents:['a2c114'],lane:1,order:2,color:'green',label:'wip 2',ghost:true},{id:'77df02',parents:['9b1240'],lane:1,order:3,color:'green',label:'wip 3 (typo)',ghost:true}],
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'77df02',color:'green'}] },
-    term: [ {type:'out', text:'# editor closed — Git folds the three commits'} ],
-    conflict: '<span class="c-com"># combining messages, then opening one final editor…</span>' },
-  { cap: "One hash, one message, ready for review — feature/search now points straight at it.",
-    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'5e21ab0',parents:['c1a001'],lane:1,order:4,color:'green',label:'search: add typo-tolerant matching'}],
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Rebasing (1/3)\nRebasing (2/3)\nRebasing (3/3)'} ],
+    conflict: '<span class="c-com"># todo list saved — Git now works through it top to bottom</span>' },
+  { cap: "Squashing opens <b>one more editor</b> — this time for the combined commit message, pre-filled with all three originals underneath each other.",
+    term: [ {type:'out', text:'# a second editor opens, for the merged commit message'} ],
+    conflict: '<span class="c-com"># This is a combination of 3 commits.</span>\n<span class="c-com"># This is the 1st commit message:</span>\nwip\n<span class="c-com">\n# This is the commit message #2:</span>\nwip 2\n<span class="c-com">\n# This is the commit message #3:</span>\nwip 3 (typo)' },
+  { cap: "You delete the placeholder lines and type one message that actually describes the change, then <kbd>Esc</kbd>, <code>:wq</code> — <b>that</b> save is the end decision. <code>feature/search</code> now points straight at the single result. The three original WIP commits aren't reachable anymore, but reflog keeps them recoverable until Git's garbage collector eventually prunes them.",
+    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'a2c114',parents:['c1a001'],lane:1,order:1,color:'green',label:'wip',ghost:true},{id:'9b1240',parents:['a2c114'],lane:1,order:2,color:'green',label:'wip 2',ghost:true},{id:'77df02',parents:['9b1240'],lane:1,order:3,color:'green',label:'wip 3 (typo)',ghost:true},{id:'5e21ab0',parents:['c1a001'],lane:1,order:4,color:'green',label:'search: add typo-tolerant matching'}],
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'5e21ab0',color:'green'}] },
-    term: [ {type:'out', text:'Successfully rebased and updated refs/heads/feature/search.'} ],
-    conflict: 'git log --oneline -1\n<span class="o-green">5e21ab0</span> (HEAD -&gt; feature/search) search: add typo-tolerant matching' },
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/search.'} ],
+    conflict: 'search: add typo-tolerant matching\n<span class="c-com">\n# hand-written message — the three "wip" placeholders are gone</span>' },
 ]};
 
 /* ------------------------------------------------------- conflict-merge */
@@ -2832,21 +3244,21 @@ S['conflict-rebase'] = { frames: [
   { cap: "<code>git rebase main</code> starts replaying, oldest first. Commit 1 (retries) applies cleanly.",
     local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},{id:'a2b112',parents:['c1a001'],lane:1,order:1,color:'green',label:'increase retries',ghost:true},{id:'9c31f0e',parents:['a2b112'],lane:1,order:2,color:'green',label:'bump timeout to 60',ghost:true},
       {id:'e4d223',parents:['c1a001'],lane:0,order:1,color:'blue',label:'bump timeout to 45'},
-      {id:'a5e334',parents:['e4d223'],lane:1,order:2,color:'green',label:'increase retries'}],
+      {id:'a5e334',parents:['e4d223'],lane:0,order:2,color:'green',label:'increase retries'}],
       branches:[{name:'main',commitId:'e4d223',color:'blue'},{name:'feature/perf',commitId:'9c31f0e',color:'green'}], head:{type:'commit',ref:'a5e334'} },
     term: [ {type:'cmd', text:'git switch feature/perf'}, {type:'cmd', text:'git rebase main'}, {type:'out', text:'Rewinding head to replay your work on top of it…\nApplying: increase retries'} ] },
   { cap: "Commit 2 of 2 conflicts — both sides changed the timeout. The <i>first</i> commit already succeeded; only this one pauses.",
     conflict: '<span class="marker-ours">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">TIMEOUT_SECONDS = 45</span>\n<span class="sep">=======</span>\n<span class="theirs">TIMEOUT_SECONDS = 60</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; 9c31f0e (bump timeout to 60)</span>\nRETRIES = 5',
     term: [ {type:'out', text:'Applying: bump timeout to 60'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in config.py</span>\nerror: could not apply 9c31f0e… bump timeout to 60'} ] },
   { cap: "Resolve, stage, and <code>--continue</code> — it moves on to the next commit (here, none are left). <code>--skip</code> would drop just this one; <code>--abort</code> undoes the whole rebase.",
-    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},
+    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},{id:'a2b112',parents:['c1a001'],lane:1,order:1,color:'green',label:'increase retries',ghost:true},{id:'9c31f0e',parents:['a2b112'],lane:1,order:2,color:'green',label:'bump timeout to 60',ghost:true},
       {id:'e4d223',parents:['c1a001'],lane:0,order:1,color:'blue',label:'bump timeout to 45'},
-      {id:'a5e334',parents:['e4d223'],lane:1,order:2,color:'green',label:'increase retries'},
-      {id:'b6f445',parents:['a5e334'],lane:1,order:3,color:'green',label:'bump timeout to 60'}],
+      {id:'a5e334',parents:['e4d223'],lane:0,order:2,color:'green',label:'increase retries'},
+      {id:'b6f445',parents:['a5e334'],lane:0,order:3,color:'green',label:'bump timeout to 60'}],
       branches:[{name:'main',commitId:'e4d223',color:'blue'},{name:'feature/perf',commitId:'b6f445',color:'green'}], head:{type:'commit',ref:'b6f445'} },
     conflict: 'TIMEOUT_SECONDS = 60  <span class="c-com"># kept the larger value</span>\nRETRIES = 5',
     term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Applying: bump timeout to 60'} ] },
-  { cap: "Rebase complete — <code>feature/perf</code> now sits cleanly on top of <code>main</code>, replayed one commit at a time.",
+  { cap: "Rebase complete — <code>feature/perf</code> now sits cleanly on top of <code>main</code>, replayed one commit at a time. The two original commits are still sitting there, unreachable but not deleted — reflog would find them until Git's garbage collector eventually cleans them up.",
     local: { head:{type:'branch',ref:'feature/perf'} },
     term: [ {type:'out', text:'Successfully rebased and updated refs/heads/feature/perf.'} ] },
 ]};
@@ -2902,6 +3314,25 @@ S['cherry-pick-conflict'] = { frames: [
     term: [ {type:'cmd', text:'git add paginate.py'}, {type:'cmd', text:'git cherry-pick --continue'}, {type:'out', text:'[release 9df221a] fix: paginate off-by-one'} ] },
 ]};
 
+/* -------------------------------------------------------- restore-source */
+S['restore-source'] = { frames: [
+  { cap: "You're on <code>main</code>. <code>release</code> has a different <code>config.py</code> — you just want to look at it, not merge or switch branches.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add feature flag'},{id:'r2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'release: harden config'}],
+             branches:[{name:'main',commitId:'m2b002',color:'blue'},{name:'release',commitId:'r2c002',color:'green',stack:1}], head:{type:'branch',ref:'main'} },
+    areas: { workspace:[], staging:[] },
+    term: [] },
+  { cap: "<code>git restore --source=release -- config.py</code> copies just that file's content from <code>release</code> into your workspace — as an uncommitted change. No switch, no merge, no new commit; watch the graph — it hasn't moved.",
+    areas: { workspace:[{id:'config.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git restore --source=release -- config.py'}, {type:'out', text:'# config.py now matches release — but only in the workspace'} ] },
+  { cap: "<code>git status</code> shows it as an ordinary modified file — Git doesn't remember it came from <code>release</code>, it's just new content sitting in the workspace now.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   config.py\n<span class="o-dim">no changes added to commit</span>'} ] },
+  { cap: "From here it's an ordinary edit: stage and commit it like anything else. (Or <code>git restore config.py</code>, with no <code>--source</code>, to discard it and keep main's original version instead.)",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add feature flag'},{id:'r2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'release: harden config'},{id:'m3d003',parents:['m2b002'],lane:0,order:2,color:'blue',label:"config: adopt release's hardening"}],
+             branches:[{name:'main',commitId:'m3d003',color:'blue'},{name:'release',commitId:'r2c002',color:'green',stack:1}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git commit -m "config: adopt release settings"'}, {type:'out', text:'[main m3d003] config: adopt release settings'} ] },
+]};
+
 /* -------------------------------------------------------- remote-basic */
 S['remote-basic'] = { frames: [
   { cap: "Local and remote start in sync — three shared commits.",
@@ -2928,13 +3359,59 @@ S['remote-basic'] = { frames: [
       {id:'e5e005',parents:['d4d004'],lane:1,order:4,color:'violet',label:'feat: dark mode'}],
       branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
     term: [ {type:'cmd', text:'git fetch origin'}, {type:'out', text:'From github.com:acme/app\n   d4d004..e5e005  main -> origin/main'} ] },
-  { cap: "<code>git pull</code> is really <code>fetch</code> + <code>merge</code> (or <code>--rebase</code>). Since your <code>main</code> has no unique commits here, it's simply a fast-forward.",
+  { cap: "Before pulling, <code>git status</code> says exactly what's going on — no guessing: <b>behind, and can be fast-forwarded</b>. No local-only commits exist here, so there's nothing of yours to merge or replay.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch is behind 'origin/main' by 1 commit, and can be fast-forwarded.\n  (use \"git pull\" to update your local branch)"} ] },
+  { cap: "<code>git pull</code> is <code>fetch</code> + <code>merge</code> (or <code>--rebase</code>) — but confirmed fast-forward-only, so no flag is needed: there's nothing local to preserve, Git just slides the pointer.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'ci setup'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'},
       {id:'e5e005',parents:['d4d004'],lane:0,order:4,color:'violet',label:'feat: dark mode'}],
       branches:[{name:'main',commitId:'e5e005',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
-    term: [ {type:'cmd', text:'git pull --rebase origin main'}, {type:'out', text:'Successfully rebased and updated refs/heads/main.'} ] },
+    term: [ {type:'cmd', text:'git pull origin main'}, {type:'out', text:'Updating d4d004..e5e005\nFast-forward\n 1 file changed'} ] },
   { cap: "Fully in sync again — until the next commit starts the cycle over.",
     term: [ {type:'cmd', text:'git log --oneline -1'}, {type:'out', text:'e5e005 (HEAD -> main, origin/main) feat: dark mode'} ] },
+]};
+
+/* -------------------------------------------------------- diverge-check */
+S['diverge-check'] = { frames: [
+  { cap: "Local and <code>origin/main</code> start in sync.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'}],
+             branches:[{name:'main',commitId:'b2b002',color:'blue'},{name:'origin/main',commitId:'b2b002',color:'violet',stack:1}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'}],
+              branches:[{name:'main',commitId:'b2b002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git log --oneline -1'}, {type:'out', text:'b2b002 (HEAD -> main, origin/main) add readme'} ] },
+  { cap: "A teammate pushes a commit straight to the remote — only it moves; your local <code>main</code> doesn't know yet.",
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'violet',label:'fix: typo'}],
+              branches:[{name:'main',commitId:'c3c003',color:'violet'}] },
+    term: [ {type:'out', text:"# meanwhile, a teammate pushes 'fix: typo'"} ] },
+  { cap: "<code>git fetch</code> downloads it and moves your <code>origin/main</code> bookmark — <code>main</code> itself still hasn't moved.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:1,order:2,color:'violet',label:'fix: typo'}],
+             branches:[{name:'main',commitId:'b2b002',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'out', text:'From github.com:acme/app\n   b2b002..c3c003  main -> origin/main'} ] },
+  { cap: "<code>git status</code> says it plainly: <b>behind, and can be fast-forwarded</b>. No local-only commits exist, so there's nothing to merge or rebase.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch is behind 'origin/main' by 1 commit, and can be fast-forwarded.\n  (use \"git pull\" to update your local branch)"} ] },
+  { cap: "Confirmed fast-forward — a plain <code>git pull</code> (no <code>--rebase</code>, nothing of yours to replay) just slides the pointer.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'}],
+             branches:[{name:'main',commitId:'c3c003',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git pull origin main'}, {type:'out', text:'Updating b2b002..c3c003\nFast-forward\n 1 file changed'} ] },
+  { cap: "Now the other case: you make a local commit of your own, <i>before</i> checking in again.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'}],
+             branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git commit -m "fix: pagination"'} ] },
+  { cap: "…and, independently, a teammate pushes again too.",
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'violet',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'violet',label:'fix: typo'},{id:'e5e005',parents:['c3c003'],lane:0,order:3,color:'violet',label:'feat: dark mode'}],
+              branches:[{name:'main',commitId:'e5e005',color:'violet'}] },
+    term: [ {type:'out', text:"# meanwhile, another teammate pushes 'feat: dark mode'"} ] },
+  { cap: "<code>git fetch</code>, then <code>git status</code> again — this time: <b>diverged</b>, with a commit count on each side. Fast-forward is no longer possible.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},{id:'d4d004',parents:['c3c003'],lane:0,order:3,color:'blue',label:'fix: pagination'},{id:'e5e005',parents:['c3c003'],lane:1,order:3,color:'violet',label:'feat: dark mode'}],
+             branches:[{name:'main',commitId:'d4d004',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git status'}, {type:'out', text:"On branch main\nYour branch and 'origin/main' have diverged,\nand have 1 and 1 different commits each, respectively.\n  (use \"git pull\" to merge the remote branch into yours)"} ] },
+  { cap: "<code>git log --oneline main..origin/main</code> lists what <i>they</i> have that you don't; swap the order to see what's local-only. Now it's an informed choice, not a guess.",
+    term: [ {type:'cmd', text:'git log --oneline main..origin/main'}, {type:'out', text:'e5e005 feat: dark mode'}, {type:'cmd', text:'git log --oneline origin/main..main'}, {type:'out', text:'d4d004 fix: pagination'} ] },
+  { cap: "Only <i>now</i>, with divergence confirmed, does rebase-vs-merge even apply — here, <code>git pull --rebase</code> to keep history linear.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add readme'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'blue',label:'fix: typo'},
+      {id:'e5e005',parents:['c3c003'],lane:0,order:3,color:'blue',label:'feat: dark mode'},{id:'d4d004',parents:['c3c003'],lane:1,order:3,color:'blue',label:'fix: pagination',ghost:true},
+      {id:'f7f007',parents:['e5e005'],lane:0,order:4,color:'blue',label:'fix: pagination'}],
+             branches:[{name:'main',commitId:'f7f007',color:'blue'},{name:'origin/main',commitId:'e5e005',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git pull --rebase origin main'}, {type:'out', text:'Successfully rebased and updated refs/heads/main.'} ] },
 ]};
 
 /* -------------------------------------------------------- full-picture */
@@ -2989,21 +3466,23 @@ S['process-squash'] = { frames: [
     term: [ {type:'cmd', text:'git commit -am "fix: off-by-one at tier boundary"'} ] },
   { cap: "Pushing gets <b>rejected</b> — a teammate already pushed a commit to this same branch, and the local history doesn't include it.",
     term: [ {type:'cmd', text:'git push origin feature/pricing'}, {type:'out', text:'<span class="o-red">! [rejected]        feature/pricing -> feature/pricing (fetch first)</span>\nerror: failed to push some refs\nhint: Updates were rejected because the remote contains work that you do\nhint: not have locally. This is usually caused by another repository\nhint: pushing to the same ref.'} ] },
-  { cap: "<code>git fetch</code> + <code>pull --rebase</code> lays the teammate's commit down first, then replays both of yours on top — new hashes for both, since their parent changed. No merge bubble, no rejection on the next push.",
+  { cap: "Before reaching for a fix: <code>git fetch</code> then <code>git status</code> confirms exactly what happened — <b>diverged</b>, not just behind, since 2 local commits exist that the remote doesn't have either.",
+    term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git status'}, {type:'out', text:"On branch feature/pricing\nYour branch and 'origin/feature/pricing' have diverged,\nand have 2 and 1 different commits each, respectively.\n  (use \"git pull\" to merge the remote branch into yours)"} ] },
+  { cap: "Confirmed diverged, and this branch is entirely yours to rewrite (no one else has based work on it) — <code>pull --rebase</code> lays the teammate's commit down first, then replays both of yours on top. New hashes for both, since their parent changed. No merge bubble, no rejection on the next push.",
     local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'t9c113',parents:['m1a001'],lane:1,order:1,color:'violet',label:"teammate: edge-case tests"},{id:'p6a006',parents:['t9c113'],lane:1,order:2,color:'green',label:'pricing: add volume-discount tier'},{id:'p7b007',parents:['p6a006'],lane:1,order:3,color:'green',label:'fix: off-by-one at tier boundary'}],
              branches:[{name:'main',commitId:'m1a001',color:'blue'},{name:'feature/pricing',commitId:'p7b007',color:'green'}] },
     term: [ {type:'cmd', text:'git fetch origin'}, {type:'cmd', text:'git pull --rebase origin feature/pricing'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
-  { cap: "Before opening the PR, tidy the branch: <code>git rebase -i</code> lists every commit as an editable <i>todo</i>. The fixup gets marked <code class=\"c-kw\" style=\"color:var(--blue)\">squash</code> into the commit above it — but the teammate's commit stays <code class=\"c-kw\" style=\"color:var(--blue)\">pick</code>, untouched: it isn't yours to rewrite.",
-    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw">squash</span> p7b007 fix: off-by-one at tier boundary\n\n<span class="c-com"># squash: meld into the commit above, combining both messages</span>',
+  { cap: "Before opening the PR, tidy the branch: <code>git rebase -i main</code> opens the todo list for every commit since the shared base — all default to <code>pick</code>, oldest first.",
+    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw">pick</span> p7b007 fix: off-by-one at tier boundary',
     term: [ {type:'cmd', text:'git rebase -i main'} ] },
-  { cap: "Reapplying the squash touches the same lines your teammate's tests cover, so it <b>conflicts</b>.",
-    conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">assert price(order) == order.subtotal * 0.95</span>\n<span class="sep">=======</span>\n<span class="theirs">assert price(order) == order.subtotal - discount(order)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; fix: off-by-one at tier boundary</span>',
-    term: [ {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in tests/test_pricing.py</span>\nerror: could not apply p7b007… fix: off-by-one at tier boundary'} ] },
-  { cap: "Resolve by keeping the more general assertion, then <code>git add</code> and <code>--continue</code>. The two commits become one — combined message, single new hash.",
+  { cap: "Only the <i>last</i> line changes to <code class=\"c-kw\" style=\"color:var(--amber)\">squash</code> — it's a tiny fixup of the commit right above it. The teammate's commit stays <code class=\"c-kw\" style=\"color:var(--blue)\">pick</code>, untouched: it isn't yours to rewrite.",
+    conflict: '<span class="c-kw">pick</span> t9c113 teammate: edge-case tests\n<span class="c-kw">pick</span> p6a006 pricing: add volume-discount tier\n<span class="c-kw" style="color:var(--amber)">squash</span> p7b007 fix: off-by-one at tier boundary\n\n<span class="c-com"># squash → meld into the commit above, combining both messages</span>',
+    term: [ {type:'cmd', text:'git rebase -i main'}, {type:'out', text:'# editing the todo list…'} ] },
+  { cap: "Save and quit — no new conflict here: both commits already replay cleanly in sequence (that's exactly what the earlier rebase just proved), so folding them needs no resolution. Git just melds the diffs and combines the messages.",
     local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'t9c113',parents:['m1a001'],lane:1,order:1,color:'violet',label:"teammate: edge-case tests"},{id:'f4d224',parents:['t9c113'],lane:1,order:2,color:'green',label:'pricing: add volume-discount tier'}],
              branches:[{name:'main',commitId:'m1a001',color:'blue'},{name:'feature/pricing',commitId:'f4d224',color:'green'}] },
-    conflict: 'assert price(order) == order.subtotal - discount(order)  <span class="c-com"># resolved: covers both cases</span>',
-    term: [ {type:'cmd', text:'git add tests/test_pricing.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
+    conflict: '<span class="c-com"># git log -1</span>\n<span style="color:var(--green)">f4d224</span> pricing: add volume-discount tier',
+    term: [ {type:'out', text:':wq'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/pricing.'} ] },
   { cap: "History was rewritten locally, so a plain push would be rejected again. <code>--force-with-lease</code> force-pushes only if the remote still matches what you last fetched — safe against clobbering anyone else's new work.",
     term: [ {type:'cmd', text:'git push --force-with-lease origin feature/pricing'}, {type:'out', text:'+ p7b007...f4d224 feature/pricing -> feature/pricing (forced update)'} ] },
 ]};
@@ -3033,12 +3512,21 @@ S['process-rebase'] = { frames: [
       branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'r5e005',color:'green'}], head:{type:'branch',ref:'feature/api'} },
     conflict: '<span class="c-com"># nothing lost — rebase --abort is a full undo, not a partial one</span>',
     term: [ {type:'cmd', text:'git rebase --abort'}, {type:'out', text:'HEAD is now at r5e005 add pagination'} ] },
-  { cap: "Retrying with a clearer head: same conflict, but this time resolve it deliberately — keep the higher, safer limit — <code>git add</code>, <code>--continue</code>.",
+  { cap: "Retrying with a clearer head: <code>git rebase main</code> again. First commit replays the same as before; the second hits the <b>identical</b> conflict — nothing about the code changed, only the state of mind.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
+      {id:'r4d004',parents:['a1a001'],lane:1,order:1,color:'green',label:'add /v2/users route',ghost:true},{id:'r5e005',parents:['r4d004'],lane:1,order:2,color:'green',label:'add pagination',ghost:true},
+      {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'}],
+      branches:[{name:'main',commitId:'m3c003',color:'blue'}] },
+    conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">MAX_PAGE_SIZE = 100  # rate-limit tuning</span>\n<span class="sep">=======</span>\n<span class="theirs">MAX_PAGE_SIZE = 50   # pagination default</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; add pagination</span>',
+    term: [ {type:'cmd', text:'git rebase main'}, {type:'out', text:'Applying: add /v2/users route'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in config.py</span>\nerror: could not apply r5e005… add pagination'} ] },
+  { cap: "This time, resolve it deliberately instead of reacting under pressure — keep the higher, safer limit. That edit is the actual fix; everything before it was just getting back to this point.",
+    conflict: 'MAX_PAGE_SIZE = 100  <span class="c-com"># resolved: rate-limit value wins, still covers pagination\'s needs</span>',
+    term: [ {type:'out', text:'# editing config.py…'} ] },
+  { cap: "<code>git add</code> marks it resolved, <code>--continue</code> resumes replaying — the rebase finishes.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'}],
       branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'n7a007',color:'green'}] },
-    conflict: 'MAX_PAGE_SIZE = 100  <span class="c-com"># resolved: rate-limit value wins, still covers pagination\'s needs</span>',
-    term: [ {type:'cmd', text:'git rebase main'}, {type:'out', text:'Applying: add /v2/users route'}, {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/api.'} ] },
+    term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/api.'} ] },
   { cap: "Meanwhile an urgent security patch lands on <code>hotfix/security</code> — needed on <code>feature/api</code> right away, without waiting for the rest of that branch to finish.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'},
@@ -3049,16 +3537,22 @@ S['process-rebase'] = { frames: [
   { cap: "It <b>conflicts</b> — feature/api's new route touches the same input-handling block.",
     conflict: '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">def get_users(req): return db.query(sanitize(req.params))</span>\n<span class="sep">=======</span>\n<span class="theirs">def handle(req): return escape_input(req.body)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; security: escape user input</span>',
     term: [ {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in routes.py</span>'} ] },
-  { cap: "Bad timing — mid-review, not the moment to untangle this. <code>cherry-pick --abort</code> undoes the in-progress pick. A stray edit from poking at the conflict is still sitting in the working tree, so <code>reset --hard</code> wipes the workspace fully back to the last commit.",
+  { cap: "Bad timing — mid-review, not the moment to untangle this. <code>cherry-pick --abort</code> undoes the in-progress pick. A stray edit from poking at the conflict is still sitting in the working tree, so <code>reset --hard</code> wipes the workspace fully back to the last commit. <code>hotfix/security</code> and its commit are untouched by any of this — cherry-pick only ever copies, it never moves the source.",
     conflict: '<span class="c-com"># reset --hard is destructive: uncommitted changes are gone for good.</span>\n<span class="c-com"># cherry-pick --abort alone would have been enough here — reset --hard is one step further.</span>',
     term: [ {type:'cmd', text:'git cherry-pick --abort'}, {type:'cmd', text:'git reset --hard HEAD'}, {type:'out', text:'HEAD is now at n7a007 add pagination'} ] },
-  { cap: "Once <code>feature/api</code>'s own routing work is merged, the security fix cherry-picks cleanly onto the settled code.",
+  { cap: "Retrying with a clearer head: <code>git cherry-pick h8b008</code> again — same commit, same target, so the <b>exact same conflict</b> comes back. Nothing about the code changed; only the abandoned attempt is gone.",
+    conflict: '<span class="marker-ours">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">def get_users(req): return db.query(sanitize(req.params))</span>\n<span class="sep">=======</span>\n<span class="theirs">def handle(req): return escape_input(req.body)</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; security: escape user input</span>',
+    term: [ {type:'cmd', text:'git cherry-pick h8b008'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in routes.py</span>'} ] },
+  { cap: "This time, resolve it properly instead of walking away — keep both fixes, combined into one function.",
+    conflict: 'def get_users(req): return db.query(sanitize(escape_input(req.params)))  <span class="c-com"># both fixes, together</span>',
+    term: [ {type:'out', text:'# editing routes.py…'} ] },
+  { cap: "<code>git add</code> then <code>--continue</code> finishes the pick as a brand-new commit — while <code>h8b008</code> itself stays exactly where it was, still on <code>hotfix/security</code>, unmodified.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'bump api version'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'add rate limiting'},
       {id:'n6f006',parents:['m3c003'],lane:1,order:3,color:'green',label:'add /v2/users route'},{id:'n7a007',parents:['n6f006'],lane:1,order:4,color:'green',label:'add pagination'},
+      {id:'h8b008',parents:['m3c003'],lane:2,order:3,color:'red',label:'security: escape user input'},
       {id:'h9c009',parents:['n7a007'],lane:1,order:5,color:'red',label:'security: escape user input'}],
-      branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'h9c009',color:'green'}] },
-    conflict: 'def get_users(req): return db.query(sanitize(escape_input(req.params)))  <span class="c-com"># both fixes, together</span>',
-    term: [ {type:'cmd', text:'git cherry-pick h8b008'}, {type:'out', text:'[feature/api h9c009] security: escape user input'} ] },
+      branches:[{name:'main',commitId:'m3c003',color:'blue'},{name:'feature/api',commitId:'h9c009',color:'green'},{name:'hotfix/security',commitId:'h8b008',color:'red',stack:1}] },
+    term: [ {type:'cmd', text:'git add routes.py'}, {type:'cmd', text:'git cherry-pick --continue'}, {type:'out', text:'[feature/api h9c009] security: escape user input'} ] },
 ]};
 
 /* ================================================================
