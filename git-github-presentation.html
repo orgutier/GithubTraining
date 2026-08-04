@@ -1487,8 +1487,8 @@ table.cmp code{ font-size:.85em; }
       <div class="slide-inner">
         <div class="slide-head">
           <span class="eyebrow violet">Test yourself</span>
-          <h1 class="title">30 questions — 20 core, 10 advanced</h1>
-          <h2 class="subtitle">Generic enough for a real interview screen: the first 20 gauge day-to-day fluency, the last 10 probe how a candidate handles history rewriting and recovery under pressure.</h2>
+          <h1 class="title">36 questions — 23 core, 13 advanced</h1>
+          <h2 class="subtitle">Generic enough for a real interview screen: the first 23 gauge day-to-day fluency, the last 13 probe how a candidate handles history rewriting and recovery under pressure.</h2>
         </div>
         <div class="quiz-app" data-quiz="main"></div>
       </div>
@@ -2655,8 +2655,17 @@ const QUIZ_DATA = [
   { level:'basic', topic:'Safe branch delete', q:'What does <code>git branch -d feature-x</code> (lowercase -d) refuse to do?',
     choices:['Delete a branch that\'s already merged','Delete a branch with unmerged work that would become unreachable','Delete any branch, ever','Rename the branch'], correct:1,
     explain:'The safe-delete flag checks first — if deleting would orphan commits, Git blocks it. -D force-deletes anyway.' },
+  { level:'basic', topic:'restore (discard)', q:'What does plain <code>git restore &lt;file&gt;</code> — no flag — do?',
+    choices:['Unstages the file without touching its content','Discards uncommitted changes in the working directory, reverting the file to match HEAD','Deletes the file from the repository entirely','Copies the file\'s content from another branch'], correct:1,
+    explain:'With no <code>--staged</code>, restore throws away working-directory edits — the destructive one of the two, and the opposite of <code>--staged</code>.' },
+  { level:'basic', topic:'commit --amend', q:'What does <code>git commit --amend</code> do?',
+    choices:['Creates a brand-new commit on top of the last one','Replaces the most recent commit with a new one, folding in whatever\'s currently staged and/or a new message','Renames the current branch','Squashes the last 3 commits into one'], correct:1,
+    explain:'Amend rewrites the tip commit in place — a lighter one-step alternative to <code>reset --soft</code> plus a recommit, for that single commit.' },
+  { level:'basic', topic:'Fast-forward or diverged?', q:'After <code>git fetch</code>, how do you know whether a plain pull will fast-forward or need a merge/rebase?',
+    choices:['You can\'t know until you try the pull','git status reports it directly — "behind, can be fast-forwarded" vs. "have diverged, and have X and Y commits"','Always assume it has diverged','Check the file sizes on each side'], correct:1,
+    explain:'git fetch never changes your branch, so it\'s always safe to check first — git status (or a two-dot git log range) says exactly which situation you\'re in.' },
 
-  // ---------------- ADVANCED (10) ----------------
+  // ---------------- ADVANCED (13) ----------------
   { level:'advanced', topic:'Merge vs rebase history', q:'Fundamentally, how do merge and rebase differ in how they handle history?',
     choices:['Merge rewrites commits; rebase never does','Merge preserves both branches\' commits and joins them; rebase rewrites your commits onto a new base, changing their hashes','They produce byte-identical results','Rebase always creates more commits than merge'], correct:1,
     explain:'Merge is additive and non-destructive. Rebase replays — and rewrites — your commits, which is powerful but changes history.' },
@@ -2687,6 +2696,15 @@ const QUIZ_DATA = [
   { level:'advanced', topic:'Why squash merge has one parent', q:'Why does <code>git merge --squash</code> NOT record the feature branch as a parent of the resulting commit?',
     choices:['It\'s a bug in Git','It only borrows the combined diff — it deliberately doesn\'t merge the branch\'s history, just its content','Squash merges are never committed','GitHub blocks it'], correct:1,
     explain:'That\'s the whole point of squash merge: adopt the code, not the branch\'s commit history.' },
+  { level:'advanced', topic:'restore --source', q:'What does <code>git restore --source=release -- config.py</code> do while you\'re on <code>main</code>?',
+    choices:['Switches to the release branch','Merges release into main','Copies just that file\'s content from release into your workspace — no switch, no merge, no new commit','Deletes config.py from the release branch'], correct:2,
+    explain:'It\'s a workspace-only operation — the commit graph never moves. Compare to cherry-pick, which copies an entire commit.' },
+  { level:'advanced', topic:'Stash indices are LIFO', q:'You stash uncommitted work twice in a row — first "feature work," later "config tweak." What is <code>stash@{1}</code> now?',
+    choices:['The config tweak, since it was stashed second','The feature work — indices are LIFO, so the newest push is always @{0}, and everything older shifts up by one','There\'s no way to tell without running git stash list first','Whichever stash touches more files'], correct:1,
+    explain:'Stash is newest-first, just like the reflog: @{0} is always the most recent push, so an older stash silently moves from @{0} to @{1} once a new one lands on top of it.' },
+  { level:'advanced', topic:'amend vs reset --soft', q:'For undoing just the single most recent commit, <code>git commit --amend</code> is functionally closest to which reset flavor, followed by a recommit?',
+    choices:['--hard','--mixed','--soft','None of them — amend is unrelated to reset'], correct:2,
+    explain:'--soft moves HEAD back but leaves everything fully staged — recommitting right away reproduces exactly what amend does in one step, for that one commit.' },
 ];
 
 class QuizController{
@@ -2917,6 +2935,8 @@ S['reset-basics'] = { frames: [
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'}], branches:[{name:'main',commitId:'f2b003',color:'green'}] },
     areas: { staging:[] },
     term: [ {type:'cmd', text:'git commit -m "feat: A — cleaner commit"'}, {type:'out', text:'[main f2b003] feat: A — cleaner commit'} ] },
+  { cap: "For a fix this simple — same content, just a better message — <code>reset --soft</code> plus a recommit was overkill. <code>git commit --amend</code> gets there in <b>one</b> command, replacing the tip commit directly. Reset earns its keep for what amend can't do: splitting one commit into several, or changing what's staged before recommitting.",
+    term: [ {type:'out', text:'# equivalent one-liner for this exact case:'}, {type:'cmd', text:'git commit --amend -m "feat: A — cleaner commit"'} ] },
   { cap: "Another commit — this time you want to reorganize before it's official.",
     local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:0,order:2,color:'green',label:'feat: B'}], branches:[{name:'main',commitId:'f3c004',color:'green'}] },
     term: [ {type:'cmd', text:'git add reports.py'}, {type:'cmd', text:'git commit -m "feat: B"'}, {type:'out', text:'[main f3c004] feat: B'} ] },
