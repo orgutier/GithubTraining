@@ -993,6 +993,18 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 6c — RESET SOFT / MIXED / HARD -->
+    <section class="slide" data-section="workspace → commit">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Core loop</span>
+          <h1 class="title"><code style="font-size:.85em;">git reset</code> — undo a commit, three ways</h1>
+          <h2 class="subtitle">Unlike <code>restore</code>, <code>reset</code> moves HEAD and the current branch pointer. The flag decides how much else it touches: just history (<code>--soft</code>), history and staging (<code>--mixed</code>, the default), or everything (<code>--hard</code>).</h2>
+        </div>
+        <div class="scene" data-scene="reset-basics" data-layout="areas-commit" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 7 — BRANCHING -->
     <section class="slide" data-section="branching">
       <div class="slide-inner">
@@ -1228,6 +1240,18 @@ table.cmp code{ font-size:.85em; }
           <h2 class="subtitle">If <code>release</code> has since changed the same lines <code>hotfix</code> touches, the pick pauses. Resolve, <code>git add</code>, then <code>git cherry-pick --continue</code> — or <code>--abort</code> to bail out entirely.</h2>
         </div>
         <div class="scene" data-scene="cherry-pick-conflict" data-layout="graph-conflict" data-term="~/app" data-panel="paginate.py — working tree"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 19b — RESTORE --SOURCE -->
+    <section class="slide" data-section="cherry-pick">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Beyond cherry-pick</span>
+          <h1 class="title">Just want <span class="accent-violet">one file</span> from another branch? Skip the commit entirely</h1>
+          <h2 class="subtitle">Cherry-pick copies a whole commit. <code>git restore --source</code> copies just a file's <i>content</i> from anywhere — no switch, no merge, no new commit, nothing for the graph to even show.</h2>
+        </div>
+        <div class="scene" data-scene="restore-source" data-layout="areas-commit" data-term="~/app"></div>
       </div>
     </section>
 
@@ -2320,7 +2344,7 @@ const GIT_DOCS = {
   },
   restore: {
     desc:'Restores files — either discarding working-directory changes, or unstaging them, depending on the flag.',
-    flags:{ '--staged': 'Unstage the given file(s) — undoes a git add — without touching their actual contents in the working directory.' }
+    flags:{ '--staged': 'Unstage the given file(s) — undoes a git add — without touching their actual contents in the working directory.', '--source': 'Read the file\'s content from a specific branch or commit instead of the index — copies it into the workspace without switching, merging, or creating a commit.' }
   },
   revert: {
     desc:'Undoes the changes from a specific commit by creating a brand-new commit that applies the inverse diff. History stays intact, which makes it the safe way to undo something that\'s already been shared/pushed.',
@@ -2880,6 +2904,41 @@ S['restore-basics'] = { frames: [
     term: [ {type:'cmd', text:'git commit -m "app: fix pagination"'}, {type:'out', text:'[main 9f0c21a] app: fix pagination\n 1 file changed, 1 insertion(+), 1 deletion(-)'} ] },
 ]};
 
+/* ----------------------------------------------------------- reset-basics */
+S['reset-basics'] = { frames: [
+  { cap: "You stage and commit a first pass at the feature — a bit too quickly.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'feat: A'}], branches:[{name:'main',commitId:'f1a002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git add feature.py'}, {type:'cmd', text:'git commit -m "feat: A"'}, {type:'out', text:'[main f1a002] feat: A'} ] },
+  { cap: "On reflection, the message (and maybe the split) needs work. <code>git reset --soft HEAD~1</code> undoes just the <b>commit</b> — HEAD moves back, but everything stays fully staged, exactly as if you'd just run <code>git add</code>.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true}], branches:[{name:'main',commitId:'a1a001',color:'blue'}] },
+    areas: { staging:[{id:'feature.py',status:'modified'}], workspace:[] },
+    term: [ {type:'cmd', text:'git reset --soft HEAD~1'}, {type:'out', text:'# HEAD -> a1a001, but the index still holds everything from feat: A'} ] },
+  { cap: "Nothing lost — tweak the message and commit again, deliberately.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'}], branches:[{name:'main',commitId:'f2b003',color:'green'}] },
+    areas: { staging:[] },
+    term: [ {type:'cmd', text:'git commit -m "feat: A — cleaner commit"'}, {type:'out', text:'[main f2b003] feat: A — cleaner commit'} ] },
+  { cap: "Another commit — this time you want to reorganize before it's official.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:0,order:2,color:'green',label:'feat: B'}], branches:[{name:'main',commitId:'f3c004',color:'green'}] },
+    term: [ {type:'cmd', text:'git add reports.py'}, {type:'cmd', text:'git commit -m "feat: B"'}, {type:'out', text:'[main f3c004] feat: B'} ] },
+  { cap: "<code>git reset --mixed HEAD~1</code> — the default, so plain <code>git reset HEAD~1</code> does the same — undoes the commit <b>and</b> unstages it, but the edits stay put in your working directory.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true}], branches:[{name:'main',commitId:'f2b003',color:'green'}] },
+    areas: { workspace:[{id:'reports.py',status:'modified'}], staging:[] },
+    term: [ {type:'cmd', text:'git reset --mixed HEAD~1'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   reports.py\n<span class="o-dim">no changes added to commit</span>'} ] },
+  { cap: "Re-stage — maybe only part of it this time — and commit again, on purpose.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'}], branches:[{name:'main',commitId:'f4d005',color:'amber'}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git add reports.py'}, {type:'cmd', text:'git commit -m "feat: B — reworked"'}, {type:'out', text:'[main f4d005] feat: B — reworked'} ] },
+  { cap: "One more commit — this one turns out to be the wrong approach entirely.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'},{id:'f5e006',parents:['f4d005'],lane:0,order:3,color:'red',label:'feat: C — wrong approach'}], branches:[{name:'main',commitId:'f5e006',color:'red'}] },
+    term: [ {type:'cmd', text:'git add scratch_approach.py'}, {type:'cmd', text:'git commit -m "feat: C — wrong approach"'}, {type:'out', text:'[main f5e006] feat: C — wrong approach'} ] },
+  { cap: "Not worth keeping any part of it. <code>git reset --hard HEAD~1</code> undoes the commit <b>and</b> wipes both the staging area and the working directory — the most destructive of the three.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'f1a002',parents:['a1a001'],lane:1,order:1,color:'blue',label:'feat: A',ghost:true},{id:'f2b003',parents:['a1a001'],lane:0,order:1,color:'green',label:'feat: A — cleaner'},{id:'f3c004',parents:['f2b003'],lane:1,order:2,color:'green',label:'feat: B',ghost:true},{id:'f4d005',parents:['f2b003'],lane:0,order:2,color:'amber',label:'feat: B — reworked'},{id:'f5e006',parents:['f4d005'],lane:1,order:3,color:'red',label:'feat: C — wrong approach',ghost:true}], branches:[{name:'main',commitId:'f4d005',color:'amber'}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git reset --hard HEAD~1'}, {type:'out', text:'HEAD is now at f4d005 feat: B — reworked'} ] },
+  { cap: "Even after <code>--hard</code>, the commit itself isn't instantly gone — <code>git reflog</code> still lists <code>f5e006</code>, recoverable until Git's garbage collector eventually prunes it. What <code>--hard</code> truly destroys with no undo is <b>uncommitted</b> work — edits that were never in a commit to begin with.",
+    term: [ {type:'cmd', text:'git reflog'}, {type:'out', text:'f4d005 HEAD@{0}: reset: moving to HEAD~1\nf5e006 HEAD@{1}: commit: feat: C — wrong approach\nf4d005 HEAD@{2}: commit: feat: B — reworked'} ] },
+]};
+
 /* ------------------------------------------------------------- branching */
 S['branching'] = { frames: [
   { cap: "Three commits on <b>main</b>.",
@@ -3041,8 +3100,8 @@ S['rebase-basic'] = { frames: [
       {id:'a3e645',parents:['f2d534'],lane:0,order:3,color:'green',label:'csv export'}],
       branches:[{name:'feature/reports',commitId:'a3e645',color:'green'},{name:'main',commitId:'f2d534',color:'blue'}] },
     term: [ {type:'out', text:'Applying: csv export'} ] },
-  { cap: "Commit 2 replayed the same way. The old two commits are now unreachable and will be garbage-collected — <code>feature/reports</code> points only at the new chain.",
-    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},
+  { cap: "Commit 2 replayed the same way — <code>feature/reports</code> now points only at the new chain. The old two commits aren't reachable from <b>any</b> branch, but they're not deleted: <code>git reflog</code> still lists them, recoverable if something goes wrong. Only later, once nothing points to them and Git's garbage collector eventually runs, do they actually get pruned.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'c9a201',parents:['a1a001'],lane:1,order:1,color:'green',label:'csv export',ghost:true},{id:'d0b312',parents:['c9a201'],lane:1,order:2,color:'green',label:'pdf export',ghost:true},
       {id:'e1c423',parents:['a1a001'],lane:0,order:1,color:'blue',label:'perf: cache'},{id:'f2d534',parents:['e1c423'],lane:0,order:2,color:'blue',label:'fix: null check'},
       {id:'a3e645',parents:['f2d534'],lane:0,order:3,color:'green',label:'csv export'},{id:'b4f756',parents:['a3e645'],lane:0,order:4,color:'green',label:'pdf export'}],
       branches:[{name:'feature/reports',commitId:'b4f756',color:'green'},{name:'main',commitId:'f2d534',color:'blue'}] },
@@ -3108,8 +3167,8 @@ S['squash-rebase'] = { frames: [
   { cap: "Squashing opens <b>one more editor</b> — this time for the combined commit message, pre-filled with all three originals underneath each other.",
     term: [ {type:'out', text:'# a second editor opens, for the merged commit message'} ],
     conflict: '<span class="c-com"># This is a combination of 3 commits.</span>\n<span class="c-com"># This is the 1st commit message:</span>\nwip\n<span class="c-com">\n# This is the commit message #2:</span>\nwip 2\n<span class="c-com">\n# This is the commit message #3:</span>\nwip 3 (typo)' },
-  { cap: "You delete the placeholder lines and type one message that actually describes the change, then <kbd>Esc</kbd>, <code>:wq</code> — <b>that</b> save is the end decision. <code>feature/search</code> now points straight at the single result.",
-    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'5e21ab0',parents:['c1a001'],lane:1,order:4,color:'green',label:'search: add typo-tolerant matching'}],
+  { cap: "You delete the placeholder lines and type one message that actually describes the change, then <kbd>Esc</kbd>, <code>:wq</code> — <b>that</b> save is the end decision. <code>feature/search</code> now points straight at the single result. The three original WIP commits aren't reachable anymore, but reflog keeps them recoverable until Git's garbage collector eventually prunes them.",
+    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'a2c114',parents:['c1a001'],lane:1,order:1,color:'green',label:'wip',ghost:true},{id:'9b1240',parents:['a2c114'],lane:1,order:2,color:'green',label:'wip 2',ghost:true},{id:'77df02',parents:['9b1240'],lane:1,order:3,color:'green',label:'wip 3 (typo)',ghost:true},{id:'5e21ab0',parents:['c1a001'],lane:1,order:4,color:'green',label:'search: add typo-tolerant matching'}],
              branches:[{name:'main',commitId:'c1a001',color:'blue'},{name:'feature/search',commitId:'5e21ab0',color:'green'}] },
     term: [ {type:'out', text:':wq'}, {type:'out', text:'Successfully rebased and updated refs/heads/feature/search.'} ],
     conflict: 'search: add typo-tolerant matching\n<span class="c-com">\n# hand-written message — the three "wip" placeholders are gone</span>' },
@@ -3165,21 +3224,21 @@ S['conflict-rebase'] = { frames: [
   { cap: "<code>git rebase main</code> starts replaying, oldest first. Commit 1 (retries) applies cleanly.",
     local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},{id:'a2b112',parents:['c1a001'],lane:1,order:1,color:'green',label:'increase retries',ghost:true},{id:'9c31f0e',parents:['a2b112'],lane:1,order:2,color:'green',label:'bump timeout to 60',ghost:true},
       {id:'e4d223',parents:['c1a001'],lane:0,order:1,color:'blue',label:'bump timeout to 45'},
-      {id:'a5e334',parents:['e4d223'],lane:1,order:2,color:'green',label:'increase retries'}],
+      {id:'a5e334',parents:['e4d223'],lane:0,order:2,color:'green',label:'increase retries'}],
       branches:[{name:'main',commitId:'e4d223',color:'blue'},{name:'feature/perf',commitId:'9c31f0e',color:'green'}], head:{type:'commit',ref:'a5e334'} },
     term: [ {type:'cmd', text:'git switch feature/perf'}, {type:'cmd', text:'git rebase main'}, {type:'out', text:'Rewinding head to replay your work on top of it…\nApplying: increase retries'} ] },
   { cap: "Commit 2 of 2 conflicts — both sides changed the timeout. The <i>first</i> commit already succeeded; only this one pauses.",
     conflict: '<span class="marker-ours">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n<span class="ours">TIMEOUT_SECONDS = 45</span>\n<span class="sep">=======</span>\n<span class="theirs">TIMEOUT_SECONDS = 60</span>\n<span class="marker-theirs">&gt;&gt;&gt;&gt;&gt;&gt;&gt; 9c31f0e (bump timeout to 60)</span>\nRETRIES = 5',
     term: [ {type:'out', text:'Applying: bump timeout to 60'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in config.py</span>\nerror: could not apply 9c31f0e… bump timeout to 60'} ] },
   { cap: "Resolve, stage, and <code>--continue</code> — it moves on to the next commit (here, none are left). <code>--skip</code> would drop just this one; <code>--abort</code> undoes the whole rebase.",
-    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},
+    local: { commits:[{id:'c1a001',parents:[],lane:0,order:0,color:'blue',label:'init config'},{id:'a2b112',parents:['c1a001'],lane:1,order:1,color:'green',label:'increase retries',ghost:true},{id:'9c31f0e',parents:['a2b112'],lane:1,order:2,color:'green',label:'bump timeout to 60',ghost:true},
       {id:'e4d223',parents:['c1a001'],lane:0,order:1,color:'blue',label:'bump timeout to 45'},
-      {id:'a5e334',parents:['e4d223'],lane:1,order:2,color:'green',label:'increase retries'},
-      {id:'b6f445',parents:['a5e334'],lane:1,order:3,color:'green',label:'bump timeout to 60'}],
+      {id:'a5e334',parents:['e4d223'],lane:0,order:2,color:'green',label:'increase retries'},
+      {id:'b6f445',parents:['a5e334'],lane:0,order:3,color:'green',label:'bump timeout to 60'}],
       branches:[{name:'main',commitId:'e4d223',color:'blue'},{name:'feature/perf',commitId:'b6f445',color:'green'}], head:{type:'commit',ref:'b6f445'} },
     conflict: 'TIMEOUT_SECONDS = 60  <span class="c-com"># kept the larger value</span>\nRETRIES = 5',
     term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git rebase --continue'}, {type:'out', text:'Applying: bump timeout to 60'} ] },
-  { cap: "Rebase complete — <code>feature/perf</code> now sits cleanly on top of <code>main</code>, replayed one commit at a time.",
+  { cap: "Rebase complete — <code>feature/perf</code> now sits cleanly on top of <code>main</code>, replayed one commit at a time. The two original commits are still sitting there, unreachable but not deleted — reflog would find them until Git's garbage collector eventually cleans them up.",
     local: { head:{type:'branch',ref:'feature/perf'} },
     term: [ {type:'out', text:'Successfully rebased and updated refs/heads/feature/perf.'} ] },
 ]};
@@ -3233,6 +3292,25 @@ S['cherry-pick-conflict'] = { frames: [
       branches:[{name:'release',commitId:'9df221a',color:'blue'},{name:'hotfix',commitId:'c2f9a01',color:'red'}] },
     conflict: 'def paginate(items, page, size):\n    start = page * size\n    return items[start:min(start + size, len(items))]  <span class="c-com"># both fixes, combined</span>',
     term: [ {type:'cmd', text:'git add paginate.py'}, {type:'cmd', text:'git cherry-pick --continue'}, {type:'out', text:'[release 9df221a] fix: paginate off-by-one'} ] },
+]};
+
+/* -------------------------------------------------------- restore-source */
+S['restore-source'] = { frames: [
+  { cap: "You're on <code>main</code>. <code>release</code> has a different <code>config.py</code> — you just want to look at it, not merge or switch branches.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add feature flag'},{id:'r2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'release: harden config'}],
+             branches:[{name:'main',commitId:'m2b002',color:'blue'},{name:'release',commitId:'r2c002',color:'green',stack:1}], head:{type:'branch',ref:'main'} },
+    areas: { workspace:[], staging:[] },
+    term: [] },
+  { cap: "<code>git restore --source=release -- config.py</code> copies just that file's content from <code>release</code> into your workspace — as an uncommitted change. No switch, no merge, no new commit; watch the graph — it hasn't moved.",
+    areas: { workspace:[{id:'config.py',status:'modified'}] },
+    term: [ {type:'cmd', text:'git restore --source=release -- config.py'}, {type:'out', text:'# config.py now matches release — but only in the workspace'} ] },
+  { cap: "<code>git status</code> shows it as an ordinary modified file — Git doesn't remember it came from <code>release</code>, it's just new content sitting in the workspace now.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:'On branch main\n  <span class="o-amber">modified:</span>   config.py\n<span class="o-dim">no changes added to commit</span>'} ] },
+  { cap: "From here it's an ordinary edit: stage and commit it like anything else. (Or <code>git restore config.py</code>, with no <code>--source</code>, to discard it and keep main's original version instead.)",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'m2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add feature flag'},{id:'r2c002',parents:['a1a001'],lane:1,order:1,color:'green',label:'release: harden config'},{id:'m3d003',parents:['m2b002'],lane:0,order:2,color:'blue',label:"config: adopt release's hardening"}],
+             branches:[{name:'main',commitId:'m3d003',color:'blue'},{name:'release',commitId:'r2c002',color:'green',stack:1}] },
+    areas: { workspace:[], staging:[] },
+    term: [ {type:'cmd', text:'git add config.py'}, {type:'cmd', text:'git commit -m "config: adopt release settings"'}, {type:'out', text:'[main m3d003] config: adopt release settings'} ] },
 ]};
 
 /* -------------------------------------------------------- remote-basic */
