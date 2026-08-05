@@ -317,6 +317,60 @@ table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
 /* ---- suppress demo ---- */
 .sup-preview{ font-family:var(--font-mono); font-size:12.5px; line-height:1.8; }
 
+/* ---- arbitration race ---- */
+.race-track{ display:flex; flex-direction:column; gap:9px; }
+.race-row{ display:flex; align-items:center; gap:10px; transition:opacity .3s ease; }
+.race-row.eliminated{ opacity:.45; }
+.race-label{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); width:74px; flex:none; line-height:1.35; }
+.race-label b{ color:var(--text); display:block; font-size:11.5px; }
+.race-bits{ display:flex; gap:3px; }
+.race-bit{ width:23px; height:23px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10.5px; font-weight:700; border:1.5px solid var(--border-lt); color:var(--text-faint); background:var(--panel-2); transition:all .2s ease; flex:none; }
+.race-bit.dominant{ background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+.race-bit.recessive{ background:transparent; border-color:var(--border-lt); color:var(--text-dim); }
+.race-bit.current{ box-shadow:0 0 0 2px var(--blue) inset; transform:scale(1.1); }
+.race-bit.lost{ background:var(--red-dim); border-color:var(--red); color:var(--red); }
+.race-bit.void{ opacity:.18; }
+.race-badge-slot{ flex:none; }
+.race-badge{ font-family:var(--font-mono); font-size:9.5px; font-weight:800; padding:3px 9px; border-radius:10px; white-space:nowrap; }
+.race-badge.win{ background:var(--green-dim); color:var(--green); border:1px solid var(--green); }
+.race-badge.out{ background:var(--red-dim); color:var(--red); border:1px solid var(--red); }
+
+/* ---- voltage / topology SVG text ---- */
+.volt-label{ font-family:'JetBrains Mono', monospace; font-size:9px; }
+.volt-chan{ font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:700; }
+
+/* ---- bit stuffing lanes ---- */
+.stuff-lane{ display:flex; align-items:center; gap:10px; }
+.stuff-label{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim); width:150px; flex:none; line-height:1.4; }
+.stuff-label b{ display:block; color:var(--text); font-size:12px; }
+.stuff-track{ position:relative; flex:1; min-width:0; }
+.stuff-cells{ display:flex; gap:3px; flex-wrap:wrap; }
+.stuff-bit{ width:22px; height:22px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; font-weight:700; border:1.5px solid var(--border-lt); color:var(--text-dim); background:var(--panel-2); position:relative; flex:none; transition:box-shadow .15s ease; }
+.stuff-bit.dominant{ background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+.stuff-bit.recessive{ background:transparent; color:var(--text-dim); }
+.stuff-bit.stuffed{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-dim); }
+.stuff-bit.stuffed::after{ content:'STUFF'; position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:7px; letter-spacing:.03em; color:var(--red); font-weight:800; white-space:nowrap; }
+.stuff-bit.current{ box-shadow:0 0 0 2px var(--blue) inset; transform:scale(1.14); }
+.stuff-cursor{ position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--text); display:none; pointer-events:none; }
+.stuff-duration-track{ height:6px; background:var(--panel-2); border-radius:3px; overflow:hidden; margin-left:160px; }
+.stuff-duration{ height:100%; border-radius:3px; }
+.stuff-duration.classical{ background:linear-gradient(90deg,var(--blue),var(--blue-dim)); }
+.stuff-duration.fd{ background:linear-gradient(90deg,var(--green),var(--green-dim)); }
+
+/* ---- session state diagram ---- */
+.sess-node{ transition:stroke-width .25s ease; }
+.sess-node.current-session{ stroke-width:4; }
+.sess-halo{ transition:opacity .3s ease; }
+
+/* ---- OTA flow pipeline ---- */
+.flow-strip{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+.flow-chip{ display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 9px; border-radius:8px; border:1.5px solid var(--border-lt); background:var(--panel); cursor:pointer; transition:all .15s ease; min-width:58px; }
+.flow-chip:hover{ border-color:var(--blue); transform:translateY(-1px); }
+.flow-chip.current{ border-color:var(--amber); box-shadow:0 0 0 2px var(--amber-dim); background:var(--panel-3); }
+.flow-num{ font-family:var(--font-mono); font-size:8.5px; color:var(--text-faint); }
+.flow-label{ font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:var(--text); white-space:nowrap; }
+.flow-arrow{ color:var(--text-faint); font-size:13px; align-self:center; flex:none; }
+
 /* ======================================================================
    QUIZ (reused pattern)
    ====================================================================== */
@@ -409,19 +463,109 @@ table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
           <h1 class="title">CAN is a <span class="accent-blue">broadcast bus</span> that arbitrates on the fly</h1>
           <h2 class="subtitle">Every node hears every frame. There's no master — the frame with the lowest ID always wins the wire, non-destructively, mid-transmission.</h2>
         </div>
-        <div class="cols c2" style="flex:1;min-height:0;">
+        <div class="cols c2-narrow" style="flex:1;min-height:0;">
           <div class="stack">
-            <ul class="bullets">
-              <li><b>Differential signaling:</b> two wires, CAN_H / CAN_L. A <b>dominant</b> bit (logical 0) drives them apart; a <b>recessive</b> bit (logical 1) lets them float together. Dominant always wins a collision.</li>
-              <li><b>Multi-master:</b> any node can start transmitting once the bus is idle (recessive) — there's no bus arbiter granting turns.</li>
-              <li><b>CSMA/CR arbitration:</b> nodes transmit their ID bit-by-bit and simultaneously read the bus. The instant a node sends recessive but reads dominant, it lost — it backs off and retries later. Lower numeric ID = higher priority.</li>
-              <li><b>Non-destructive:</b> unlike Ethernet's CSMA/CD, nobody's frame gets corrupted by the collision — the losing node just stops cleanly at the arbitration field.</li>
+            <ul class="bullets compact">
+              <li><b>Differential signaling:</b> two wires, CAN_H / CAN_L. <b>Dominant</b> (0) drives them apart; <b>recessive</b> (1) lets them float together. Dominant always wins.</li>
+              <li><b>Multi-master:</b> any node starts transmitting once the bus is idle — no arbiter granting turns.</li>
+              <li><b>CSMA/CR:</b> nodes send their ID bit-by-bit while reading the bus back. Send recessive, read dominant → you lost, back off. Lowest numeric ID wins.</li>
+              <li><b>Non-destructive:</b> unlike Ethernet, nobody's frame is corrupted — the loser just stops cleanly.</li>
             </ul>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Why this matters for diagnostics</div>
+              <p class="lead" style="font-size:13px;">A UDS request is just another frame competing for the bus — usually given a high-priority (numerically low) ID so it isn't starved behind sensor traffic.</p>
+            </div>
           </div>
-          <div class="panel">
-            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Why this matters for diagnostics</div>
-            <p class="lead">UDS request/response traffic rides on top of this exact mechanism. A tester's diagnostic request is just another CAN frame competing for the bus — usually given a high-priority (numerically low) arbitration ID so it doesn't get starved behind high-rate sensor traffic.</p>
-            <p class="lead" style="margin-top:10px;">Everything from here — frame layout, error handling, ISO-TP segmentation, UDS services — sits on top of this one arbitration rule.</p>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Watch it happen — three nodes racing for the bus</div>
+            <div class="bform" style="margin-bottom:10px;">
+              <div class="bfield"><label>Node A ID</label><input type="text" id="arId0" value="120" style="width:56px;"></div>
+              <div class="bfield"><label>Node B ID</label><input type="text" id="arId1" value="122" style="width:56px;"></div>
+              <div class="bfield"><label>Node C ID</label><input type="text" id="arId2" value="7A0" style="width:56px;"></div>
+              <button class="bbtn tx" id="arPlay">▶ Play arbitration</button>
+              <button class="bbtn ghost" id="arRace">⟲ Rebuild</button>
+            </div>
+            <div class="race-track" id="arRows"></div>
+            <div class="step-caption" id="arCaption" style="margin-top:10px;">Click <b>Play arbitration</b> to watch it happen bit by bit.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2b: SIGNAL & VOLTAGE LEVELS -->
+    <section class="slide" data-section="fundamentals" data-title="Signal & voltage levels">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow blue">Fundamentals · Physical layer</span>
+          <h1 class="title">What "dominant" and "recessive" look like on the wire</h1>
+          <h2 class="subtitle">CAN_H and CAN_L never carry a "0" or "1" directly — a receiver decides the bit from the <i>difference</i> between the two.</h2>
+        </div>
+        <div class="cols c2-narrow" style="flex:1; min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>ISO 11898-2 voltage levels</div>
+              <table class="cmp" style="font-size:12px;">
+                <tr><th></th><th>CAN_H</th><th>CAN_L</th><th>V_diff</th></tr>
+                <tr><td class="hl">Recessive (1)</td><td>~2.5V</td><td>~2.5V</td><td>~0V</td></tr>
+                <tr><td class="hl">Dominant (0)</td><td>~3.5V</td><td>~1.5V</td><td>~2.0V</td></tr>
+              </table>
+              <p class="lead" style="font-size:12.8px; margin-top:8px;">Recessive is the bus's <b>relaxed, undriven</b> state — both wires pulled to the same ~2.5V by the termination resistors. Only a dominant bit is actively driven apart. That asymmetry is exactly why dominant always wins a collision: it takes real effort to overpower it.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Detection thresholds</div>
+              <p class="lead" style="font-size:12.8px;">A receiver calls it <b>dominant</b> once V_diff climbs past ~0.9V, and <b>recessive</b> once it drops back below ~0.5V — a deliberate gap (hysteresis) so noise near the middle doesn't flicker the decision.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--green)"></span>Same thresholds on CAN FD</div>
+              <p class="lead" style="font-size:12.8px;">ISO 11898-2 keeps these exact voltage levels and thresholds for FD too — what changes during BRS is only <b>how fast</b> the driver has to swing between them, not the levels themselves. Faster edges are why FD is far less tolerant of long stubs and poor termination (next slide).</p>
+            </div>
+          </div>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>Live waveform — type a bit pattern (0=dominant, 1=recessive)</div>
+            <div class="bform" style="margin-bottom:6px;">
+              <div class="bfield grow"><label>Bit pattern</label><input type="text" id="voltBits" value="0 0 0 1 0 1 1"></div>
+              <button class="bbtn ghost mini" id="voltPresetHigh">High-priority ID</button>
+              <button class="bbtn ghost mini" id="voltPresetLow">Low-priority ID</button>
+              <button class="bbtn ghost mini" id="voltPresetIdle">Idle</button>
+            </div>
+            <svg id="voltSvg" viewBox="0 0 500 250" style="width:100%; flex:1; min-height:0;"></svg>
+            <div class="row" style="margin-top:6px;">
+              <button class="bbtn tx" id="voltPlay">▶ Sweep</button>
+              <span class="footnote" id="voltReadout" style="font-family:var(--font-mono);">Click Sweep to animate the cursor.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2c: TERMINATION RESISTORS -->
+    <section class="slide" data-section="fundamentals" data-title="Termination resistors & bus topology">
+      <div class="slide-inner pad-tight">
+        <div class="slide-head">
+          <span class="eyebrow blue">Fundamentals · Physical layer</span>
+          <h1 class="title">Two resistors, not one per node</h1>
+          <h2 class="subtitle">CAN is a transmission line. Without matched termination at both ends, every edge reflects back and forth instead of settling cleanly.</h2>
+        </div>
+        <div class="cols c2" style="flex:1; min-height:0;">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>The bus, end to end</div>
+              <svg id="topoSvg" viewBox="0 0 560 150" style="width:100%; height:150px;"></svg>
+              <p class="lead" style="font-size:12.5px; margin-top:8px;">A twisted pair has a characteristic impedance of <b>~120Ω</b>. Put a <b>120Ω resistor at each of the two physical ends</b> of the bus and the line is impedance-matched — an edge arrives, gets absorbed, and stays gone. Nodes tap in along the middle through short <b>stubs</b>, unterminated.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--red)"></span>Why not one resistor per node?</div>
+              <p class="lead" style="font-size:12.5px;">120Ω resistors in parallel drop the effective bus impedance fast (two ≈60Ω, four ≈30Ω…) — the driver can no longer pull V_diff past the dominant threshold, and stub length becomes far more sensitive to reflections at FD data-phase speeds. It's exactly two, always at the physical ends, everywhere in between is just a tap.</p>
+            </div>
+          </div>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--green)"></span>Same edge, terminated vs. not</div>
+            <div class="row" style="margin-bottom:8px;">
+              <button class="bbtn tx" id="ringPlay">▶ Send a bit edge</button>
+              <span class="footnote">watch the settle time on each trace</span>
+            </div>
+            <svg id="ringSvg" viewBox="0 0 500 230" style="width:100%; flex:1; min-height:0;"></svg>
+            <p class="footnote" style="margin-top:6px;">Terminated (top): the edge settles almost immediately. Unterminated (bottom): the same edge bounces off both open ends and rings for several bit-times — at FD's faster data rate, it may not settle before the next bit is sampled, corrupting it.</p>
           </div>
         </div>
       </div>
@@ -644,32 +788,48 @@ table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
 
     <!-- 8: BIT STUFFING -->
     <section class="slide" data-section="frame structure" data-title="Bit stuffing & frame integrity">
-      <div class="slide-inner">
+      <div class="slide-inner pad-tight">
         <div class="slide-head">
           <span class="eyebrow red">Frame structure → errors</span>
           <h1 class="title">Bit stuffing keeps every node's clock in sync</h1>
-          <h2 class="subtitle">CAN has no separate clock wire — receivers resynchronize on every edge. A long run of identical bits would starve them of edges, so the transmitter inserts artificial ones.</h2>
+          <h2 class="subtitle">CAN has no separate clock wire — receivers resynchronize on every edge. Same insertion rule on both buses; only how fast each bit goes by changes.</h2>
         </div>
-        <div class="cols c2" style="flex:1;min-height:0;">
+        <div class="cols c2-narrow" style="flex:1;min-height:0;">
           <div class="stack">
             <div class="panel">
               <div class="panel-title"><span class="sw" style="background:var(--red)"></span>The rule</div>
-              <p class="lead">After <b>5 consecutive bits of the same polarity</b> (5 dominant or 5 recessive in a row), the transmitter inserts one bit of the opposite polarity. Every receiver knows the rule too, so it silently removes that bit before interpreting the data — it's invisible above this layer.</p>
-              <p class="lead" style="margin-top:8px;">Stuffing applies from SOF through the end of the CRC field. <b>EOF is deliberately exempt</b> — its 7 recessive bits are how everyone agrees the frame just ended.</p>
+              <p class="lead" style="font-size:13px;">After <b>5 consecutive bits of the same polarity</b>, the transmitter inserts one bit of the opposite polarity. Receivers silently remove it — invisible above this layer. Applies SOF through the CRC field; <b>EOF is exempt</b> (its 7 recessive bits are how everyone agrees the frame ended).</p>
             </div>
             <div class="panel">
-              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Why it doubles as error detection</div>
-              <p class="lead">If a receiver ever sees a 6th identical bit where stuffing should have broken the run, that's not noise it can shrug off — it's a guaranteed protocol violation. That's exactly the <b>Stuff Error</b> covered on the next slide.</p>
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Doubles as error detection</div>
+              <p class="lead" style="font-size:13px;">A 6th identical bit where stuffing should have broken the run isn't noise — it's a guaranteed protocol violation: a <b>Stuff Error</b> (next slide).</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--green)"></span>CAN FD's CRC-field exception</div>
+              <p class="lead" style="font-size:13px;">Inside the CRC field only, FD switches to <b>fixed stuffing</b> — one stuff bit every 4 bits regardless of polarity — plus a 3-bit stuff-count field, an independent check on top of the CRC itself.</p>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-title"><span class="sw" style="background:var(--green)"></span>CAN FD's extra safeguard</div>
-            <p class="lead">At FD's faster data-phase rate, mis-counting stuff bits during the CRC field would be more damaging (a single lost/gained bit could still pass a coincidentally-matching CRC on a long frame). So FD switches strategy inside the CRC field specifically:</p>
-            <ul class="bullets compact" style="margin-top:8px;">
-              <li><b>Fixed stuff bits:</b> instead of "after 5 identical bits," FD inserts one stuff bit every 4 bits through the CRC field, regardless of polarity.</li>
-              <li><b>Stuff count field:</b> a 3-bit counter (plus parity) at the start of the CRC field tells the receiver exactly how many stuff bits it should have removed — a second, independent check on top of the CRC itself.</li>
-            </ul>
-            <p class="footnote" style="margin-top:10px;">Net effect: FD's CRC field is more robust per bit than Classical's, which matters more as the data field — and therefore the CRC computation — got a lot longer.</p>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>Same rule, two clocks — watch it happen</div>
+            <div class="bform" style="margin-bottom:8px;">
+              <div class="bfield grow"><label>Raw bits before stuffing</label><input type="text" id="sfPattern" value="1 1 0 0 0 0 0 1 1"></div>
+              <button class="bbtn ghost mini" id="sfPreset1">5 dominant run</button>
+              <button class="bbtn ghost mini" id="sfPreset2">5 recessive run</button>
+              <button class="bbtn tx" id="sfPlay">▶ Play both</button>
+            </div>
+            <div class="step-caption" id="sfSummary" style="margin-bottom:10px;"></div>
+            <div class="stuff-lane">
+              <div class="stuff-label"><b>Classical CAN</b>500 kbit/s · 2µs/bit</div>
+              <div class="stuff-track"><div class="stuff-cells" id="sfClassicalCells"></div><div class="stuff-cursor" id="sfClassicalCursor"></div></div>
+            </div>
+            <div class="stuff-duration-track"><div class="stuff-duration classical" id="sfClassicalBar" style="width:100%;"></div></div>
+            <div class="footnote" id="sfClassicalTime" style="margin:2px 0 12px;"></div>
+            <div class="stuff-lane">
+              <div class="stuff-label"><b>CAN FD data phase</b>2 Mbit/s · 0.5µs/bit</div>
+              <div class="stuff-track"><div class="stuff-cells" id="sfFdCells"></div><div class="stuff-cursor" id="sfFdCursor"></div></div>
+            </div>
+            <div class="stuff-duration-track"><div class="stuff-duration fd" id="sfFdBar" style="width:25%;"></div></div>
+            <div class="footnote" id="sfFdTime" style="margin-top:2px;"></div>
           </div>
         </div>
       </div>
@@ -985,30 +1145,33 @@ table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
           <h2 class="subtitle">Almost every service on the next slides checks "am I in the right session?" before doing anything else — this is the state machine underneath that check.</h2>
         </div>
         <div class="cols c2-wide" style="flex:1;min-height:0;">
-          <div class="panel">
-            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>The three common sessions</div>
-            <div class="row" style="justify-content:space-between; gap:10px; margin:10px 0 16px;">
-              <div class="pill blue" style="font-size:13px;padding:9px 16px;">01 · Default</div>
-              <span style="color:var(--text-faint)">⇄</span>
-              <div class="pill violet" style="font-size:13px;padding:9px 16px;">03 · Extended</div>
-              <span style="color:var(--text-faint)">⇄</span>
-              <div class="pill amber" style="font-size:13px;padding:9px 16px;">02 · Programming</div>
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Click a transition — watch the state move</div>
+            <svg id="sessSvg" viewBox="0 0 580 190" style="width:100%; height:190px;"></svg>
+            <div class="row" style="margin:8px 0;">
+              <button class="bbtn tx" id="sessToExt">10 03 → Extended</button>
+              <button class="bbtn tx" id="sessToProg">10 02 → Programming</button>
+              <button class="bbtn ghost" id="sessToDefExplicit">10 01 → Default</button>
+              <button class="bbtn err" id="sessTimeout">⏱ S3 timeout → Default</button>
             </div>
-            <table class="cmp">
-              <tr><th>Session</th><th>What's normally allowed</th></tr>
-              <tr><td class="hl">01 Default</td><td>The power-on state. Read-mostly: <code>0x22</code>, <code>0x19</code>. Reprogramming and most security-gated writes are blocked here.</td></tr>
-              <tr><td class="hl">03 Extended</td><td>Unlocks routine control, most <code>0x2E</code> writes, and is the usual prerequisite for requesting <code>0x27</code> security access.</td></tr>
-              <tr><td class="hl">02 Programming</td><td>Where <code>0x34</code>/<code>0x36</code>/<code>0x37</code> flashing actually happens — reachable only after security access, and it deliberately disables most other services (the ECU is busy).</td></tr>
-            </table>
+            <div class="step-caption" id="sessCaption">Currently in <b>01 Default</b> — the power-on state.</div>
           </div>
           <div class="stack">
             <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>What's normally allowed</div>
+              <table class="cmp" style="font-size:12px;">
+                <tr><td class="hl">01 Default</td><td>Read-mostly: <code>0x22</code>, <code>0x19</code>. Reprogramming and security-gated writes blocked.</td></tr>
+                <tr><td class="hl">03 Extended</td><td>Unlocks routine control, most <code>0x2E</code> writes; usual prerequisite for <code>0x27</code>.</td></tr>
+                <tr><td class="hl">02 Programming</td><td>Where <code>0x34</code>/<code>0x36</code>/<code>0x37</code> happen — reachable only after security access; most other services disabled.</td></tr>
+              </table>
+            </div>
+            <div class="panel">
               <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>Falling back to Default</div>
-              <p class="lead">Every non-default session runs an <b>S3 timer</b> (commonly ~5 s). If the client doesn't send <i>something</i> diagnostic before it expires — normally a <code>0x3E</code> TesterPresent keep-alive — the ECU silently drops back to the Default session on its own.</p>
+              <p class="lead" style="font-size:12.5px;">Every non-default session runs an <b>S3 timer</b> (~5s). No diagnostic traffic before it expires — normally kept alive with <code>0x3E</code> TesterPresent — and the ECU silently drops back to Default on its own.</p>
             </div>
             <div class="panel">
               <div class="panel-title"><span class="sw" style="background:var(--red)"></span>Why this matters mid-flash</div>
-              <p class="lead">Losing Programming session mid-transfer (S3 timeout, a reset, a dropped tester-present) invalidates the whole 0x34/0x36 sequence — the ECU expects to restart from 0x34. This is exactly why flashing tools hammer TesterPresent throughout the entire OTA sequence.</p>
+              <p class="lead" style="font-size:12.5px;">Losing Programming session mid-transfer invalidates the whole 0x34/0x36 sequence — the ECU expects to restart from 0x34. That's why flashing tools hammer TesterPresent throughout.</p>
             </div>
           </div>
         </div>
@@ -1397,22 +1560,16 @@ table.cmp tr:hover td{ background:rgba(255,255,255,.015); }
               <p class="lead"><span class="pill red">Suppress not supported</span> — no SubFunction byte, and the client needs to know definitively whether the whole transfer verified before doing anything else.</p>
             </div>
           </div>
-          <div class="panel">
+          <div class="panel" style="display:flex; flex-direction:column; min-height:0;">
             <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>The whole OTA flash sequence</div>
-            <ul class="bullets compact">
-              <li><code>10 03</code> → Extended session</li>
-              <li><code>27 01</code> / <code>27 02</code> → Security access unlock</li>
-              <li><code>31 01 FF00</code> → checkProgrammingDependencies (pre-check)</li>
-              <li><code>10 02</code> → Programming session</li>
-              <li><code>34</code> → RequestDownload, learn maxNumberOfBlockLength</li>
-              <li><code>36 × N</code> → TransferData, one BSC per block, each block itself multi-frame</li>
-              <li><code>37</code> → RequestTransferExit, verify checksum/signature</li>
-              <li><code>31 01 FF00</code> → checkProgrammingDependencies (post-check)</li>
-              <li><code>2E F184 / F199</code> → write fingerprint + programming date</li>
-              <li><code>11 01</code> → hard reset into the new image</li>
-              <li><code>19 0A</code> / <code>22 F186</code> → confirm no new DTCs, confirm active session/version</li>
-            </ul>
-            <p class="footnote" style="margin-top:8px;"><code>3E 00</code> TesterPresent runs throughout, off the critical path, to hold the session open.</p>
+            <div class="row" style="margin-bottom:8px;">
+              <button class="bbtn tx" id="otaPlay">▶ Play the sequence</button>
+              <button class="step-btn" id="otaPrev">‹</button>
+              <button class="step-btn" id="otaNext">›</button>
+            </div>
+            <div class="flow-strip" id="otaFlowStrip"></div>
+            <div class="step-caption" id="otaCaption" style="margin-top:10px;"></div>
+            <p class="footnote" style="margin-top:auto; padding-top:8px;"><code>3E 00</code> TesterPresent runs throughout, off the critical path, to hold the session open.</p>
           </div>
         </div>
       </div>
@@ -1862,6 +2019,330 @@ function dlcOptionsFor(bus){
   return [[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6'],[7,'7'],[8,'8']];
 }
 
+/* ---- Slide 2: animated arbitration race ---- */
+function initArbitrationRace(){
+  const raceBtn = document.getElementById('arRace');
+  if(!raceBtn) return;
+  const rowsEl = document.getElementById('arRows');
+  const captionEl = document.getElementById('arCaption');
+  const playBtn = document.getElementById('arPlay');
+  let timer = null;
+  const names = ['Node A','Node B','Node C'];
+  function idsFromInputs(){
+    return ['arId0','arId1','arId2'].map(id=>{
+      const el = document.getElementById(id);
+      const v = parseInt((el.value||'0').replace(/[^0-9a-fA-F]/g,''),16);
+      return (isNaN(v)?0:v) & 0x7FF;
+    });
+  }
+  function bitsOf(v){ const b=[]; for(let k=0;k<11;k++) b.push((v>>(10-k))&1); return b; }
+  function build(){
+    clearInterval(timer);
+    const ids = idsFromInputs();
+    const bitArrays = ids.map(bitsOf);
+    let active = [0,1,2];
+    const eliminatedAt = [null,null,null];
+    for(let k=0;k<11;k++){
+      const dominantPresent = active.some(i=>bitArrays[i][k]===0);
+      if(dominantPresent){
+        active.slice().forEach(i=>{
+          if(bitArrays[i][k]===1){ eliminatedAt[i]=k; active = active.filter(x=>x!==i); }
+        });
+      }
+    }
+    const winner = active.length ? active[0] : 0;
+    rowsEl.innerHTML = names.map((nm,i)=>{
+      const cells = bitArrays[i].map((b,k)=>'<span class="race-bit" data-node="'+i+'" data-k="'+k+'">'+b+'</span>').join('');
+      return '<div class="race-row" id="arRow'+i+'"><span class="race-label"><b>'+nm+'</b>0x'+ids[i].toString(16).toUpperCase().padStart(3,'0')+'</span>'+
+        '<span class="race-bits">'+cells+'</span><span class="race-badge-slot" id="arBadge'+i+'"></span></div>';
+    }).join('');
+    captionEl.innerHTML = 'Click <b>Play arbitration</b> to watch it happen bit by bit.';
+    window.__arState = { bitArrays, eliminatedAt, winner, names, ids };
+  }
+  function step(k){
+    const st = window.__arState;
+    document.querySelectorAll('.race-bit').forEach(c=>c.classList.remove('current'));
+    const losersThisBit = [];
+    for(let i=0;i<3;i++){
+      const row = document.getElementById('arRow'+i);
+      const cell = row.querySelector('.race-bit[data-k="'+k+'"]');
+      const val = st.bitArrays[i][k];
+      const elim = st.eliminatedAt[i];
+      cell.classList.add(val===0?'dominant':'recessive');
+      if(elim!==null && k>elim){ cell.classList.add('void'); }
+      else if(elim===k){ cell.classList.add('lost','current'); row.classList.add('eliminated'); losersThisBit.push(i); document.getElementById('arBadge'+i).innerHTML = '<span class="race-badge out">OUT — bit '+k+'</span>'; }
+      else { cell.classList.add('current'); }
+    }
+    if(losersThisBit.length){
+      captionEl.innerHTML = '<b>Bit '+k+':</b> '+losersThisBit.map(i=>st.names[i]).join(', ')+' sent <span class="r">recessive (1)</span> but the bus reads <span class="b">dominant (0)</span> — eliminated, backs off.';
+    } else {
+      captionEl.innerHTML = '<b>Bit '+k+':</b> all remaining nodes agree on this bit — arbitration continues.';
+    }
+    if(k===10){
+      const w = st.winner;
+      document.getElementById('arRow'+w).classList.remove('eliminated');
+      document.getElementById('arRow'+w).classList.add('winner');
+      document.getElementById('arBadge'+w).innerHTML = '<span class="race-badge win">WINS ARBITRATION</span>';
+      captionEl.innerHTML = '<b>'+st.names[w]+'</b> (0x'+st.ids[w].toString(16).toUpperCase().padStart(3,'0')+') sent the lowest ID and keeps transmitting uninterrupted — everyone else silently retries once the bus is free.';
+    }
+  }
+  function play(){
+    let k = 0;
+    clearInterval(timer);
+    step(0);
+    timer = setInterval(()=>{
+      k++;
+      if(k>10){ clearInterval(timer); return; }
+      step(k);
+    }, 550);
+  }
+  raceBtn.addEventListener('click', build);
+  playBtn.addEventListener('click', ()=>{ build(); play(); });
+  build();
+}
+window.WIDGET_INIT.push(initArbitrationRace);
+
+/* ---- Slide 2b: voltage-level waveform ---- */
+const VOLT_COLORS = { h:'#6cb6ff', l:'#7ee787', d:'#e3b341', th:'#ff7b72', grid:'#2e3849', dim:'#5b6472', text:'#8b96a5' };
+function parseBitsInput(str, fallbackLen){
+  let toks = (str||'').trim().split(/\s+/).filter(Boolean);
+  let bits = toks.map(t=> t==='1' ? 1 : 0);
+  if(!bits.length) bits = Array(fallbackLen||8).fill(1);
+  return bits.slice(0,14);
+}
+function voltGeom(n){ return { bw:60, marginL:42, marginR:14, w: 42+n*60+14 }; }
+function yH(v){ return 70 - v*12; }
+function yL(v){ return 150 - v*12; }
+function yD(v){ return 230 - (v+0.5)*20; }
+function stepPathAttr(values, bw, marginL, yfn){
+  let d = '';
+  values.forEach((v,i)=>{
+    const x0 = marginL + i*bw, x1 = marginL + (i+1)*bw, y = yfn(v);
+    d += (i===0 ? ('M'+x0+' '+y) : (' L'+x0+' '+y)) + ' L'+x1+' '+y;
+  });
+  return d;
+}
+function renderVoltageWaveform(svg, bits){
+  const {bw, marginL, w} = voltGeom(bits.length);
+  svg.setAttribute('viewBox', '0 0 '+w+' 250');
+  const canH = bits.map(b=> b===0 ? 3.5 : 2.5);
+  const canL = bits.map(b=> b===0 ? 1.5 : 2.5);
+  const vdiff = canH.map((v,i)=> v - canL[i]);
+  let s = '';
+  s += '<text x="2" y="20" class="volt-chan" fill="'+VOLT_COLORS.h+'">CAN_H</text>';
+  s += '<text x="2" y="100" class="volt-chan" fill="'+VOLT_COLORS.l+'">CAN_L</text>';
+  s += '<text x="2" y="180" class="volt-chan" fill="'+VOLT_COLORS.d+'">V_diff</text>';
+  [2.5,3.5].forEach(v=> s += '<line x1="'+marginL+'" y1="'+yH(v)+'" x2="'+(w-14)+'" y2="'+yH(v)+'" stroke="'+VOLT_COLORS.grid+'" stroke-dasharray="2 3"/><text x="2" y="'+(yH(v)+3)+'" class="volt-label" fill="'+VOLT_COLORS.text+'">'+v+'V</text>');
+  [1.5,2.5].forEach(v=> s += '<line x1="'+marginL+'" y1="'+yL(v)+'" x2="'+(w-14)+'" y2="'+yL(v)+'" stroke="'+VOLT_COLORS.grid+'" stroke-dasharray="2 3"/><text x="2" y="'+(yL(v)+3)+'" class="volt-label" fill="'+VOLT_COLORS.text+'">'+v+'V</text>');
+  s += '<line x1="'+marginL+'" y1="'+yD(0.9)+'" x2="'+(w-14)+'" y2="'+yD(0.9)+'" stroke="'+VOLT_COLORS.th+'" stroke-dasharray="2 3"/><text x="2" y="'+(yD(0.9)+3)+'" class="volt-label" fill="'+VOLT_COLORS.th+'">0.9V</text>';
+  s += '<line x1="'+marginL+'" y1="'+yD(0.5)+'" x2="'+(w-14)+'" y2="'+yD(0.5)+'" stroke="'+VOLT_COLORS.th+'" stroke-dasharray="2 3"/><text x="2" y="'+(yD(0.5)+3)+'" class="volt-label" fill="'+VOLT_COLORS.th+'">0.5V</text>';
+  s += '<path d="'+stepPathAttr(canH,bw,marginL,yH)+'" fill="none" stroke="'+VOLT_COLORS.h+'" stroke-width="2"/>';
+  s += '<path d="'+stepPathAttr(canL,bw,marginL,yL)+'" fill="none" stroke="'+VOLT_COLORS.l+'" stroke-width="2"/>';
+  s += '<path d="'+stepPathAttr(vdiff,bw,marginL,yD)+'" fill="none" stroke="'+VOLT_COLORS.d+'" stroke-width="2.5"/>';
+  bits.forEach((b,i)=>{
+    const x = marginL + i*bw;
+    s += '<line x1="'+x+'" y1="0" x2="'+x+'" y2="240" stroke="'+VOLT_COLORS.grid+'" stroke-width="1" opacity="0.35"/>';
+    s += '<text x="'+(x+bw/2)+'" y="245" text-anchor="middle" class="volt-label" fill="'+(b===0?VOLT_COLORS.d:VOLT_COLORS.text)+'">'+(b===0?'0 dom':'1 rec')+'</text>';
+  });
+  s += '<g id="voltCursorLayer" style="display:none;"><line id="voltCursorLine" x1="0" y1="0" x2="0" y2="240" stroke="#e6edf3" stroke-width="1.5"/></g>';
+  svg.innerHTML = s;
+}
+function initVoltageGraph(){
+  const svg = document.getElementById('voltSvg');
+  if(!svg) return;
+  const input = document.getElementById('voltBits');
+  const readout = document.getElementById('voltReadout');
+  let bits = [], timer = null;
+  function draw(){
+    clearInterval(timer);
+    bits = parseBitsInput(input.value, 7);
+    renderVoltageWaveform(svg, bits);
+    readout.innerHTML = 'Click <b>Sweep</b> to animate the cursor.';
+  }
+  function showAt(i){
+    const {bw, marginL} = voltGeom(bits.length);
+    const x = marginL + i*bw + bw/2;
+    const layer = document.getElementById('voltCursorLayer');
+    const line = document.getElementById('voltCursorLine');
+    if(!layer || !line) return;
+    layer.style.display = 'block';
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    const b = bits[i];
+    const h = b===0?3.5:2.5, l = b===0?1.5:2.5, d = h-l;
+    readout.innerHTML = 'Bit '+i+': <b style="color:'+VOLT_COLORS.h+'">CAN_H='+h.toFixed(1)+'V</b> · <b style="color:'+VOLT_COLORS.l+'">CAN_L='+l.toFixed(1)+'V</b> · <b style="color:'+VOLT_COLORS.d+'">V_diff='+d.toFixed(1)+'V</b> → <b>'+(b===0?'DOMINANT':'recessive')+'</b>';
+  }
+  function play(){
+    let i = 0;
+    clearInterval(timer);
+    showAt(0);
+    timer = setInterval(()=>{
+      i++;
+      if(i>=bits.length){ clearInterval(timer); return; }
+      showAt(i);
+    }, 650);
+  }
+  input.addEventListener('input', draw);
+  document.getElementById('voltPresetHigh').addEventListener('click', ()=>{ input.value='0 0 0 0 0 0 1 0 0 0 0'; draw(); });
+  document.getElementById('voltPresetLow').addEventListener('click', ()=>{ input.value='1 1 1 1 1 1 0 0 0 0 0'; draw(); });
+  document.getElementById('voltPresetIdle').addEventListener('click', ()=>{ input.value='1 1 1 1 1 1 1 1'; draw(); });
+  document.getElementById('voltPlay').addEventListener('click', play);
+  draw();
+}
+window.WIDGET_INIT.push(initVoltageGraph);
+
+/* ---- Slide 2c: bus topology + termination ringing ---- */
+function renderBusTopology(){
+  const svg = document.getElementById('topoSvg');
+  if(!svg) return;
+  const busY = 70, x0 = 60, x1 = 500;
+  let s = '';
+  s += '<line x1="'+x0+'" y1="'+busY+'" x2="'+x1+'" y2="'+busY+'" stroke="#6cb6ff" stroke-width="3"/>';
+  // termination resistor symbols (zigzag) at both ends
+  [x0, x1].forEach(x=>{
+    const dir = x===x0 ? -1 : 1;
+    const zx = x + dir*26;
+    s += '<line x1="'+x+'" y1="'+busY+'" x2="'+zx+'" y2="'+busY+'" stroke="#e3b341" stroke-width="2.5"/>';
+    let zig = 'M'+zx+' '+(busY-10);
+    for(let k=0;k<4;k++){ zig += ' L'+(zx+dir*6*(k+1))+' '+(busY+(k%2===0?10:-10)); }
+    s += '<path d="'+zig+'" fill="none" stroke="#e3b341" stroke-width="2.5"/>';
+    s += '<text x="'+(zx+dir*30)+'" y="'+(busY+4)+'" text-anchor="'+(dir<0?'end':'start')+'" class="volt-chan" fill="#e3b341">120Ω</text>';
+  });
+  // nodes with stubs
+  const nodes = [ {x:150,label:'ECU 1'}, {x:260,label:'ECU 2'}, {x:340,label:'ECU 3'}, {x:430,label:'ECU 4'} ];
+  nodes.forEach(n=>{
+    s += '<line x1="'+n.x+'" y1="'+busY+'" x2="'+n.x+'" y2="'+(busY-32)+'" stroke="#8b96a5" stroke-width="1.5" stroke-dasharray="3 2"/>';
+    s += '<rect x="'+(n.x-28)+'" y="'+(busY-62)+'" width="56" height="28" rx="6" fill="#161c27" stroke="#2e3849"/>';
+    s += '<text x="'+n.x+'" y="'+(busY-44)+'" text-anchor="middle" class="volt-chan" fill="#e6edf3">'+n.label+'</text>';
+  });
+  s += '<text x="'+x0+'" y="'+(busY+34)+'" class="volt-label" fill="#5b6472">bus end</text>';
+  s += '<text x="'+x1+'" y="'+(busY+34)+'" text-anchor="end" class="volt-label" fill="#5b6472">bus end</text>';
+  s += '<text x="'+((x0+x1)/2)+'" y="'+(busY+34)+'" text-anchor="middle" class="volt-label" fill="#5b6472">unterminated stubs — keep them short</text>';
+  svg.innerHTML = s;
+}
+function ringPathAttr(clean){
+  const marginL = 30, w = 470, mid = 20, band = 90; // per-trace band height
+  const steadyY = 0.5*band; // mid-level = pre-edge value
+  const highY = 0.05*band;
+  let pts = [];
+  const steps = 140;
+  for(let i=0;i<=steps;i++){
+    const t = i/steps*10; // 0..10 "bit-time" units
+    let y;
+    if(t < 1){ y = steadyY; }
+    else {
+      const tt = t-1;
+      if(clean){
+        // fast critically-damped settle
+        y = highY + (steadyY-highY) * (1 - Math.exp(-tt*3));
+        // slight single overshoot then settle
+        y -= (steadyY-highY)*0.06*Math.exp(-tt*3)*Math.sin(tt*6);
+      } else {
+        // underdamped ringing that decays slowly
+        y = highY + (steadyY-highY) * (1 - Math.exp(-tt*0.55)*Math.cos(tt*7.5));
+      }
+    }
+    pts.push([marginL + t/10*w, mid + y]);
+  }
+  let d = 'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L');
+  return d;
+}
+function renderRinging(svg){
+  let s = '';
+  s += '<text x="4" y="16" class="volt-chan" fill="#7ee787">Terminated (clean)</text>';
+  s += '<path d="'+ringPathAttr(true)+'" fill="none" stroke="#7ee787" stroke-width="2.5"/>';
+  s += '<g transform="translate(0,115)">';
+  s += '<text x="4" y="16" class="volt-chan" fill="#ff7b72">Unterminated (ringing)</text>';
+  s += '<path d="'+ringPathAttr(false)+'" fill="none" stroke="#ff7b72" stroke-width="2.5"/>';
+  s += '</g>';
+  s += '<g id="ringCursorLayer" style="display:none;"><line x1="30" y1="0" x2="30" y2="230" stroke="#e6edf3" stroke-width="1.5" stroke-dasharray="3 2" id="ringCursorLine"/></g>';
+  svg.innerHTML = s;
+}
+function initRingingDemo(){
+  const svg = document.getElementById('ringSvg');
+  if(!svg) return;
+  renderRinging(svg);
+  const btn = document.getElementById('ringPlay');
+  let raf = null;
+  btn.addEventListener('click', ()=>{
+    const layer = document.getElementById('ringCursorLayer');
+    const line = document.getElementById('ringCursorLine');
+    layer.style.display = 'block';
+    const start = performance.now(), dur = 1400, marginL = 30, w = 470;
+    if(raf) cancelAnimationFrame(raf);
+    function tick(now){
+      const p = Math.min(1, (now-start)/dur);
+      const x = marginL + p*w;
+      line.setAttribute('x1', x); line.setAttribute('x2', x);
+      if(p < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  });
+}
+window.WIDGET_INIT.push(function(){ renderBusTopology(); initRingingDemo(); });
+
+/* ---- Slide 8: bit stuffing — classical vs FD speed ---- */
+function computeStuffedStream(rawBits){
+  const out = [];
+  let run = 0, last = null;
+  rawBits.forEach(b=>{
+    out.push({ bit:b, stuffed:false });
+    if(b === last) run++; else { run = 1; last = b; }
+    if(run === 5){
+      const sb = 1 - b;
+      out.push({ bit:sb, stuffed:true });
+      run = 1; last = sb;
+    }
+  });
+  return out;
+}
+function renderStuffRow(containerId, stream){
+  const el = document.getElementById(containerId);
+  el.innerHTML = stream.map((it,i)=> '<span class="stuff-bit '+(it.bit===0?'dominant':'recessive')+(it.stuffed?' stuffed':'')+'" data-i="'+i+'">'+it.bit+'</span>').join('');
+}
+function initBitStuffing(){
+  const buildBtn = document.getElementById('sfPlay');
+  if(!buildBtn) return;
+  const input = document.getElementById('sfPattern');
+  let stream = [];
+  function build(){
+    const raw = parseBitsInput(input.value, 9);
+    stream = computeStuffedStream(raw);
+    renderStuffRow('sfClassicalCells', stream);
+    renderStuffRow('sfFdCells', stream);
+    const n = stream.length;
+    document.getElementById('sfClassicalTime').innerHTML = n+' bits × 2µs = <b>'+(n*2)+'µs</b> on the wire';
+    document.getElementById('sfFdTime').innerHTML = n+' bits × 0.5µs = <b>'+(n*0.5)+'µs</b> on the wire — <span style="color:var(--green)">4× faster</span>, same bits';
+    const stuffedCount = stream.filter(s=>s.stuffed).length;
+    document.getElementById('sfSummary').innerHTML = raw.length+' raw bits in → <b>'+stuffedCount+' stuff bit'+(stuffedCount===1?'':'s')+' inserted</b> → '+n+' bits actually sent. Identical insertion points on both buses — the clock is the only thing that changed.';
+  }
+  function sweep(rowId, cursorId, n, msPerBit){
+    const cellStep = 25; // 22px cell + 3px gap, matches CSS
+    const cursor = document.getElementById(cursorId);
+    cursor.style.display = 'block';
+    const dur = Math.max(1, n*msPerBit);
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-start)/dur);
+      cursor.style.left = (p*n*cellStep)+'px';
+      const activeIdx = Math.min(n-1, Math.floor(p*n));
+      document.querySelectorAll('#'+rowId+' .stuff-bit').forEach((c,i)=> c.classList.toggle('current', i===activeIdx));
+      if(p < 1) requestAnimationFrame(tick);
+      else { cursor.style.display='none'; document.querySelectorAll('#'+rowId+' .stuff-bit').forEach(c=>c.classList.remove('current')); }
+    }
+    requestAnimationFrame(tick);
+  }
+  buildBtn.addEventListener('click', ()=>{
+    build();
+    sweep('sfClassicalCells','sfClassicalCursor', stream.length, 300);
+    sweep('sfFdCells','sfFdCursor', stream.length, 75);
+  });
+  document.getElementById('sfPreset1').addEventListener('click', ()=>{ input.value='1 1 0 0 0 0 0 1 1'; build(); });
+  document.getElementById('sfPreset2').addEventListener('click', ()=>{ input.value='0 0 1 1 1 1 1 0 0'; build(); });
+  input.addEventListener('input', build);
+  build();
+}
+window.WIDGET_INIT.push(initBitStuffing);
+
 /* ---- Slide 9: Frame builder + trace ---- */
 function initFrameBuilder(){
   const bus = document.getElementById('fbBus');
@@ -2029,6 +2510,66 @@ function initFDEncoder(){
   render();
 }
 window.WIDGET_INIT.push(initFDEncoder);
+
+/* ---- Slide 16: session state diagram ---- */
+const SESS_NODES = {
+  default:     { x:100, y:130, color:'#6cb6ff', label:'01', sub:'Default' },
+  extended:    { x:290, y:60,  color:'#d2a8ff', label:'03', sub:'Extended' },
+  programming: { x:480, y:130, color:'#e3b341', label:'02', sub:'Programming' }
+};
+let SESS_CURRENT = 'default';
+function renderSessionDiagram(){
+  const svg = document.getElementById('sessSvg');
+  if(!svg) return;
+  let s = '';
+  s += '<line x1="100" y1="130" x2="290" y2="60" stroke="#2e3849" stroke-width="2"/>';
+  s += '<line x1="290" y1="60" x2="480" y2="130" stroke="#2e3849" stroke-width="2"/>';
+  s += '<text x="175" y="82" class="volt-label" fill="#5b6472">10 03 / 10 01</text>';
+  s += '<text x="365" y="82" class="volt-label" fill="#5b6472">10 02 / 10 03</text>';
+  Object.keys(SESS_NODES).forEach(key=>{
+    const n = SESS_NODES[key];
+    s += '<circle id="sessHalo-'+key+'" class="sess-halo" cx="'+n.x+'" cy="'+n.y+'" r="42" fill="'+n.color+'" opacity="0"/>';
+    s += '<circle id="sessNode-'+key+'" class="sess-node" cx="'+n.x+'" cy="'+n.y+'" r="34" fill="#161c27" stroke="'+n.color+'" stroke-width="2"/>';
+    s += '<text x="'+n.x+'" y="'+(n.y-2)+'" text-anchor="middle" class="volt-chan" fill="'+n.color+'" font-size="15">'+n.label+'</text>';
+    s += '<text x="'+n.x+'" y="'+(n.y+14)+'" text-anchor="middle" class="volt-label" fill="#8b96a5">'+n.sub+'</text>';
+  });
+  s += '<circle id="sessToken" cx="100" cy="130" r="6" fill="#7ee787" style="display:none;"/>';
+  svg.innerHTML = s;
+}
+function setSessCurrent(key, captionHtml){
+  SESS_CURRENT = key;
+  Object.keys(SESS_NODES).forEach(k=>{
+    document.getElementById('sessNode-'+k).classList.toggle('current-session', k===key);
+    document.getElementById('sessHalo-'+k).setAttribute('opacity', k===key ? '0.22' : '0');
+  });
+  const cap = document.getElementById('sessCaption');
+  if(cap) cap.innerHTML = captionHtml;
+}
+function animateSessToken(target, doneCaption){
+  const from = SESS_NODES[SESS_CURRENT], to = SESS_NODES[target];
+  const token = document.getElementById('sessToken');
+  token.style.display = 'block';
+  const start = performance.now(), dur = 850;
+  function tick(now){
+    const p = Math.min(1, (now-start)/dur);
+    token.setAttribute('cx', from.x + (to.x-from.x)*p);
+    token.setAttribute('cy', from.y + (to.y-from.y)*p);
+    if(p < 1) requestAnimationFrame(tick);
+    else { token.style.display='none'; setSessCurrent(target, doneCaption); }
+  }
+  requestAnimationFrame(tick);
+}
+function initSessionDiagram(){
+  const btn = document.getElementById('sessToExt');
+  if(!btn) return;
+  renderSessionDiagram();
+  setSessCurrent('default', 'Currently in <b>01 Default</b> — the power-on state.');
+  btn.addEventListener('click', ()=> animateSessToken('extended', '<b>10 03</b> accepted — now in <b>03 Extended</b>. Routine control and most writes are unlocked; the S3 timer starts.'));
+  document.getElementById('sessToProg').addEventListener('click', ()=> animateSessToken('programming', '<b>10 02</b> accepted (after security access) — now in <b>02 Programming</b>. Most other services are disabled; the ECU is busy flashing.'));
+  document.getElementById('sessToDefExplicit').addEventListener('click', ()=> animateSessToken('default', 'Tester explicitly sent <b>10 01</b> — back in <b>01 Default</b> on request, no timeout involved.'));
+  document.getElementById('sessTimeout').addEventListener('click', ()=> animateSessToken('default', '<b>S3 timer expired</b> — no diagnostic traffic (no TesterPresent) arrived in time, so the ECU silently fell back to <b>01 Default</b> on its own.'));
+}
+window.WIDGET_INIT.push(initSessionDiagram);
 
 /* ---- Slide 21: DID table filter ---- */
 function initDidFilter(){
@@ -2257,6 +2798,50 @@ function initQuiz(){
   new QuizController(root);
 }
 window.WIDGET_INIT.push(initQuiz);
+
+/* ---- Slide 27: OTA flow pipeline ---- */
+const OTA_STEPS = [
+  { label:'10 03', detail:'Enter <b>Extended session</b> — unlocks routine control and most writes.' },
+  { label:'27 01/02', detail:'<b>SecurityAccess</b> handshake — request a seed, submit the computed key.' },
+  { label:'31 FF00', detail:'<b>checkProgrammingDependencies</b> (pre-check) — confirm the ECU is in a safe state to start flashing.' },
+  { label:'10 02', detail:'Enter <b>Programming session</b> — most other services are now disabled while the ECU flashes.' },
+  { label:'34', detail:'<b>RequestDownload</b> — declare the target address/size, learn maxNumberOfBlockLength.' },
+  { label:'36 × N', detail:'<b>TransferData</b>, one blockSequenceCounter per block — each block itself segmented via ISO-TP.' },
+  { label:'37', detail:'<b>RequestTransferExit</b> — hand over a checksum/signature; the ECU verifies the whole image.' },
+  { label:'31 FF00', detail:'<b>checkProgrammingDependencies</b> (post-check) — confirm the new image is consistent and complete.' },
+  { label:'2E F184/F199', detail:'Write the <b>fingerprint</b> and <b>programming-date</b> DIDs — reprogram traceability.' },
+  { label:'11 01', detail:'<b>Hard reset</b> — reboot into the newly flashed image.' },
+  { label:'19 0A / 22 F186', detail:'Post-flash verification — confirm <b>no new DTCs</b>, confirm the active session/version.' }
+];
+let OTA_IDX = 0, OTA_TIMER = null;
+function otaGoTo(i){
+  OTA_IDX = Math.max(0, Math.min(i, OTA_STEPS.length-1));
+  document.querySelectorAll('#otaFlowStrip .flow-chip').forEach((c,ci)=> c.classList.toggle('current', ci===OTA_IDX));
+  document.getElementById('otaCaption').innerHTML = '<b>Step '+(OTA_IDX+1)+'/'+OTA_STEPS.length+':</b> '+OTA_STEPS[OTA_IDX].detail;
+}
+function initOtaFlow(){
+  const strip = document.getElementById('otaFlowStrip');
+  if(!strip) return;
+  strip.innerHTML = OTA_STEPS.map((s,i)=>
+    '<div class="flow-chip" data-i="'+i+'"><div class="flow-num">'+(i+1)+'</div><div class="flow-label">'+s.label+'</div></div>' +
+    (i < OTA_STEPS.length-1 ? '<span class="flow-arrow">→</span>' : '')
+  ).join('');
+  otaGoTo(0);
+  strip.addEventListener('click', (e)=>{ const c = e.target.closest('.flow-chip'); if(c) otaGoTo(Number(c.dataset.i)); });
+  document.getElementById('otaPrev').addEventListener('click', ()=>{ clearInterval(OTA_TIMER); otaGoTo(OTA_IDX-1); });
+  document.getElementById('otaNext').addEventListener('click', ()=>{ clearInterval(OTA_TIMER); otaGoTo(OTA_IDX+1); });
+  document.getElementById('otaPlay').addEventListener('click', ()=>{
+    clearInterval(OTA_TIMER);
+    otaGoTo(0);
+    let i = 0;
+    OTA_TIMER = setInterval(()=>{
+      i++;
+      if(i>=OTA_STEPS.length){ clearInterval(OTA_TIMER); return; }
+      otaGoTo(i);
+    }, 1150);
+  });
+}
+window.WIDGET_INIT.push(initOtaFlow);
 
 /* WIDGETS-MARKER */
 </script>
