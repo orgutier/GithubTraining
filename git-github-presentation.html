@@ -514,6 +514,43 @@ pre.code-block .c-conflict, .conflict-block .c-conflict{ color:var(--amber); }
 }
 .exercise-check b{ color:var(--green); }
 
+/* two-column body: prose/checklist on the left, tabbed shell+file reference
+   on the right — every exercise/setup step gets both, so nothing needed to
+   do the task is ever left implicit */
+.exercise-main{ display:flex; gap:18px; flex:1; min-height:0; }
+.exercise-details{ flex:1 1 52%; min-width:0; min-height:0; display:flex; flex-direction:column; gap:14px; overflow-y:auto; padding-right:4px; }
+.exercise-ref{
+  flex:1 1 44%; min-width:280px; max-width:480px; min-height:0; display:flex; flex-direction:column;
+  background:#080a0e; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+}
+.exref-tabs{ display:flex; flex:none; border-bottom:1px solid var(--border); }
+.exref-tab{
+  flex:1; padding:9px 10px; background:var(--panel-2); border:none; border-right:1px solid var(--border);
+  color:var(--text-faint); font-family:var(--font-mono); font-size:12px; font-weight:700; letter-spacing:.03em;
+  cursor:pointer;
+}
+.exref-tab:last-child{ border-right:none; }
+.exref-tab.active{ color:var(--amber); background:#0c0e13; }
+.exref-pane{ display:none; flex:1; min-height:0; overflow-y:auto; padding:13px 15px; }
+.exref-pane.active{ display:block; }
+.exref-pane .term-line{ margin:0 0 2px 0; }
+.exref-pane .term-out{ margin:2px 0 12px 0; font-size:13px; }
+.ftree-root{ font-family:var(--font-mono); font-size:13px; color:var(--text); font-weight:700; margin-bottom:4px; }
+.ftree-row{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-dim); padding:3px 0; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.ftree-row.ftree-dir{ color:var(--text-faint); }
+.ftree-row.ftree-file.touch{ color:var(--amber); }
+.ftree-row.ftree-file.new{ color:var(--green); }
+.ftree-tag{
+  font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+  padding:1px 7px; border-radius:10px; flex:none;
+}
+.ftree-tag.new{ color:var(--green); background:var(--green-dim); border:1px solid var(--green); }
+.ftree-tag.touch{ color:var(--amber); background:rgba(227,179,65,.14); border:1px solid var(--amber); }
+@media (max-width: 980px){
+  .exercise-main{ flex-direction:column; }
+  .exercise-ref{ max-width:none; }
+}
+
 /* ======================================================================
    CONFLICT MARKERS
    ====================================================================== */
@@ -2068,12 +2105,91 @@ class Scene{
 }
 
 /* ---------- exercise panel renderer ---------- */
+/* every exercise lives inside the same practice project, so the Files tab
+   can always render the whole tree and just mark which paths matter now */
+const PROJECT_TREE = [
+  'README.md',
+  'catalog/listing.py',
+  'pricing/pricing.py',
+  'cart/cart.py',
+  'pagination/paginate.py',
+  'auth/auth.py',
+  'config/settings.py',
+];
+
+function fileTree(opts){
+  opts = opts || {};
+  const touched = new Set(opts.touched || []);
+  const creating = opts.creating === true ? new Set(PROJECT_TREE) : new Set(opts.creating || []);
+  const root = {};
+  PROJECT_TREE.forEach(path=>{
+    const parts = path.split('/');
+    let node = root;
+    parts.forEach((part, i)=>{
+      if(i === parts.length-1){
+        (node.__files = node.__files || []).push({ name: part, path });
+      } else {
+        node[part] = node[part] || {};
+        node = node[part];
+      }
+    });
+  });
+  function renderNode(node, depth){
+    let html = '';
+    Object.keys(node).filter(k=>k!=='__files').sort().forEach(dir=>{
+      html += `<div class="ftree-row ftree-dir" style="padding-left:${depth*16}px">📁 ${dir}/</div>`;
+      html += renderNode(node[dir], depth+1);
+    });
+    (node.__files || []).forEach(f=>{
+      let cls = 'ftree-row ftree-file', tag = '';
+      if(creating.has(f.path)){ cls += ' new'; tag = '<span class="ftree-tag new">new</span>'; }
+      else if(touched.has(f.path)){ cls += ' touch'; tag = '<span class="ftree-tag touch">touch</span>'; }
+      html += `<div class="${cls}" style="padding-left:${depth*16}px">📄 ${f.name}${tag}</div>`;
+    });
+    return html;
+  }
+  return `<div class="ftree-root">📁 mini-shop/</div>${renderNode(root, 1)}`;
+}
+
+function shellHTML(lines){
+  if(!lines || !lines.length) return '<div class="term-out" style="color:var(--text-faint)"># no new commands for this step</div>';
+  return lines.map(l=>{
+    if(l.cmd !== undefined) return `<div class="term-line"><span class="prompt">$</span><span class="cmdtext">${l.cmd}</span></div>`;
+    if(l.out !== undefined) return `<div class="term-out">${l.out}</div>`;
+    if(l.comment !== undefined) return `<div class="term-out" style="color:var(--text-faint)"># ${l.comment}</div>`;
+    return '';
+  }).join('');
+}
+
 function renderExercisePanel(el, ex){
   const badge = ex.kind==='setup' ? '🔧 Setup — do this first' : '🏋 Your turn — exercise';
   el.innerHTML = `<div class="exercise-badge ${ex.kind==='setup'?'setup':'task'}">${badge}</div>
-    <div class="exercise-title">${ex.title}</div>
-    <div class="exercise-body">${ex.html}</div>`;
+    <div class="exercise-main">
+      <div class="exercise-details">
+        <div class="exercise-title">${ex.title}</div>
+        <div class="exercise-body">${ex.html}</div>
+      </div>
+      <div class="exercise-ref">
+        <div class="exref-tabs">
+          <button type="button" class="exref-tab active" data-tab="shell">▸ Shell</button>
+          <button type="button" class="exref-tab" data-tab="files">📁 Files</button>
+        </div>
+        <div class="exref-pane exref-shell active">${shellHTML(ex.shell)}</div>
+        <div class="exref-pane exref-files">${fileTree({ touched: ex.touched, creating: ex.creating })}</div>
+      </div>
+    </div>`;
 }
+document.addEventListener('click', (e)=>{
+  const tab = e.target.closest('.exref-tab');
+  if(!tab) return;
+  const ref = tab.closest('.exercise-ref');
+  if(!ref) return;
+  ref.querySelectorAll('.exref-tab').forEach(t=>t.classList.toggle('active', t===tab));
+  const which = tab.dataset.tab;
+  ref.querySelectorAll('.exref-pane').forEach(p=>{
+    p.classList.toggle('active', p.classList.contains('exref-'+which));
+  });
+});
 
 /* ---------- areas renderer ---------- */
 function chipHTML(item){
@@ -2940,7 +3056,24 @@ S['mental-model'] = { frames: [
           <li>Stage everything and commit it as <code>"init: mini-shop scaffold"</code>.</li>
           <li>Create an empty repo on GitHub (or GitLab/Bitbucket), add it as <code>origin</code>, then <code>git push -u origin main</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git log --oneline</code> shows one commit, <code>git remote -v</code> lists <code>origin</code>, and the commit is visible on your remote's web UI.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --oneline</code> shows one commit, <code>git remote -v</code> lists <code>origin</code>, and the commit is visible on your remote's web UI.</div>` ,
+      shell: [
+        {cmd:'mkdir mini-shop && cd mini-shop'},
+        {cmd:'git init'},
+        {out:'Initialized empty Git repository in mini-shop/.git/'},
+        {comment:'create the six module files + README, one or two lines each'},
+        {cmd:'mkdir catalog pricing cart pagination auth config'},
+        {cmd:'printf "def price(order): return order.subtotal\\n" > pricing/pricing.py'},
+        {comment:'…repeat for the other five files, then:'},
+        {cmd:'git add .'},
+        {cmd:'git commit -m "init: mini-shop scaffold"'},
+        {out:'[main (root-commit) a1b2c3d] init: mini-shop scaffold\n 7 files changed, 7 insertions(+)'},
+        {comment:'create an empty repo on GitHub first, then connect it'},
+        {cmd:'git remote add origin git@github.com:<you>/mini-shop.git'},
+        {cmd:'git push -u origin main'},
+        {out:'To github.com:<you>/mini-shop.git\n * [new branch]      main -> main'},
+      ],
+      creating: true } },
   { cap: "🏋 Your turn — practice this in your own mini-shop project.",
     exercise: { kind:'task', title: "Walk one file through all five areas",
       html: `<p>Put the mental model to work in your own project, in one pass, checking <code>git status</code> after every step.</p>
@@ -2951,7 +3084,17 @@ S['mental-model'] = { frames: [
           <li>Without committing, make an unrelated, throwaway edit to <code>pricing/pricing.py</code> and <code>git stash</code> it. (Stash)</li>
           <li><code>git push origin main</code> to send your catalog commit to GitHub. (Remote)</li>
         </ul>
-        <div class="exercise-check">✓ Check: your commit shows on GitHub, <code>git stash list</code> shows one entry, and <code>git status</code> is clean except for that stash.</div>` } },
+        <div class="exercise-check">✓ Check: your commit shows on GitHub, <code>git stash list</code> shows one entry, and <code>git status</code> is clean except for that stash.</div>` ,
+      shell: [
+        {comment:'edit catalog/listing.py in your editor'},
+        {cmd:'git add catalog/listing.py'},
+        {cmd:'git commit -m "catalog: add second listing helper"'},
+        {comment:'now an unrelated, throwaway edit'},
+        {cmd:'git stash'},
+        {out:'Saved working directory and index state WIP on main: … catalog: add second listing helper'},
+        {cmd:'git push origin main'},
+      ],
+      touched: ['catalog/listing.py','pricing/pricing.py'] } },
 ]};
 
 /* ---------------------------------------------------- workspace-to-commit */
@@ -2991,7 +3134,17 @@ S['workspace-to-commit'] = { frames: [
           <li>Commit with a real message: <code>git commit -m "pagination: support an offset"</code>.</li>
           <li><code>git log --oneline</code> to see it land.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git status</code> is clean, and <code>git diff --staged</code> now shows nothing (there's nothing staged left to compare).</div>` } },
+        <div class="exercise-check">✓ Check: <code>git status</code> is clean, and <code>git diff --staged</code> now shows nothing (there's nothing staged left to compare).</div>` ,
+      shell: [
+        {comment:'edit pagination/paginate.py to add an offset parameter'},
+        {cmd:'git status'},
+        {cmd:'git diff'},
+        {cmd:'git add pagination/paginate.py'},
+        {cmd:'git diff --staged'},
+        {cmd:'git commit -m "pagination: support an offset"'},
+        {cmd:'git log --oneline'},
+      ],
+      touched: ['pagination/paginate.py'] } },
 ]};
 
 /* ---------------------------------------------------------- restore-basics */
@@ -3020,7 +3173,16 @@ S['restore-basics'] = { frames: [
           <li>Decide that edit isn't worth keeping at all: <code>git restore cart/cart.py</code> (no flag) to discard it completely.</li>
           <li>Commit only <code>pricing/pricing.py</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git log -p -1</code> shows only the pricing change, and <code>cart/cart.py</code> is back to its original content.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log -p -1</code> shows only the pricing change, and <code>cart/cart.py</code> is back to its original content.</div>` ,
+      shell: [
+        {comment:'edit both files, then stage both'},
+        {cmd:'git add cart/cart.py pricing/pricing.py'},
+        {cmd:'git restore --staged cart/cart.py'},
+        {cmd:'git status'},
+        {cmd:'git restore cart/cart.py'},
+        {cmd:'git commit -m "pricing: adjust pricing logic"'},
+      ],
+      touched: ['cart/cart.py','pricing/pricing.py'] } },
 ]};
 
 /* ----------------------------------------------------------- reset-basics */
@@ -3067,7 +3229,28 @@ S['reset-basics'] = { frames: [
           <li>Commit a third change, then <code>git reset --mixed HEAD~1</code> (or just <code>git reset HEAD~1</code>) — confirm the edit is back in the workspace, unstaged.</li>
           <li>Commit a deliberately "wrong approach" fourth change, then <code>git reset --hard HEAD~1</code> — confirm it's gone from <code>git status</code>, then use <code>git reflog</code> to find its hash and prove it's still recoverable.</li>
         </ul>
-        <div class="exercise-check">✓ Check: you can point to exactly which reset flavor left what staged/unstaged/discarded, and you found the "deleted" hard-reset commit again in the reflog.</div>` } },
+        <div class="exercise-check">✓ Check: you can point to exactly which reset flavor left what staged/unstaged/discarded, and you found the "deleted" hard-reset commit again in the reflog.</div>` ,
+      shell: [
+        {cmd:'git switch -c practice/reset-drill'},
+        {comment:'cycle 1 — soft'},
+        {cmd:'git commit -am "auth: rushed fix"'},
+        {cmd:'git reset --soft HEAD~1'},
+        {cmd:'git status'},
+        {cmd:'git commit -m "auth: fix session timeout"'},
+        {comment:'cycle 2 — amend instead of reset+recommit'},
+        {cmd:'git commit -am "auth: rushed again"'},
+        {cmd:'git commit --amend -m "auth: fix token refresh"'},
+        {comment:'cycle 3 — mixed'},
+        {cmd:'git commit -am "auth: rushed third fix"'},
+        {cmd:'git reset --mixed HEAD~1'},
+        {cmd:'git status'},
+        {comment:'cycle 4 — hard'},
+        {cmd:'git commit -am "auth: wrong approach"'},
+        {cmd:'git reset --hard HEAD~1'},
+        {cmd:'git status'},
+        {cmd:'git reflog'},
+      ],
+      touched: ['auth/auth.py'] } },
 ]};
 
 /* ------------------------------------------------------------- branching */
@@ -3108,7 +3291,18 @@ S['branching'] = { frames: [
           <li>From <code>main</code>, create <code>hotfix/catalog-typo</code> with <code>switch -c</code>.</li>
           <li>Run <code>git log --oneline --all --graph</code> and confirm <code>hotfix/catalog-typo</code> branches off <code>main</code>'s tip, <b>not</b> off <code>feature/catalog-search</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: if you'd skipped the "switch main" step, the graph would show hotfix branching off feature/catalog-search instead — that's the mistake this drill is built to catch.</div>` } },
+        <div class="exercise-check">✓ Check: if you'd skipped the "switch main" step, the graph would show hotfix branching off feature/catalog-search instead — that's the mistake this drill is built to catch.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/catalog-search'},
+        {cmd:'git branch --show-current'},
+        {comment:'two commits, both touching catalog/listing.py'},
+        {cmd:'git commit -am "catalog: add search index"'},
+        {cmd:'git commit -am "catalog: tune search ranking"'},
+        {cmd:'git switch main'},
+        {cmd:'git switch -c hotfix/catalog-typo'},
+        {cmd:'git log --oneline --all --graph'},
+      ],
+      touched: ['catalog/listing.py'] } },
 ]};
 
 /* --------------------------------------------------------------- stash */
@@ -3159,7 +3353,12 @@ S['stash-flow'] = { frames: [
   { cap: "🔧 Setup — get two files mid-edit before you stash.",
     exercise: { kind:'setup', title: "Start two unrelated, uncommitted edits",
       html: `<p>On <code>main</code> in <code>mini-shop</code>, edit both <code>pagination/paginate.py</code> and <code>auth/auth.py</code> — anything trivial — and leave both <b>uncommitted</b>. Don't stage or commit either one yet.</p>
-        <div class="exercise-check">✓ Check: <code>git status</code> shows both files modified, nothing staged.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git status</code> shows both files modified, nothing staged.</div>` ,
+      shell: [
+        {comment:'edit both files, leave them uncommitted'},
+        {cmd:'git status'},
+      ],
+      touched: ['pagination/paginate.py','auth/auth.py'] } },
   { cap: "🏋 Your turn — recreate the full stash workflow.",
     exercise: { kind:'task', title: "Stash before switching, then recover one specific stash by name",
       html: `<p>Using the two files you just set up:</p>
@@ -3170,7 +3369,19 @@ S['stash-flow'] = { frames: [
           <li>Run <code>git stash list</code> and read the output — don't guess the index. Identify which entry is the pagination/auth one.</li>
           <li><code>git stash apply</code> (not <code>pop</code>) that specific entry by its <code>stash@{n}</code>, then drop it once you've confirmed it's back.</li>
         </ul>
-        <div class="exercise-check">✓ Check: after the apply, <code>pagination/paginate.py</code> and <code>auth/auth.py</code> are both modified again, and <code>git stash list</code> still shows the config one untouched.</div>` } },
+        <div class="exercise-check">✓ Check: after the apply, <code>pagination/paginate.py</code> and <code>auth/auth.py</code> are both modified again, and <code>git stash list</code> still shows the config one untouched.</div>` ,
+      shell: [
+        {cmd:'git stash push -m "pagination + auth wip"'},
+        {cmd:'git switch -c hotfix/cart-bug'},
+        {cmd:'git commit -am "cart: fix quantity bug"'},
+        {cmd:'git switch main'},
+        {comment:'edit config/settings.py'},
+        {cmd:'git stash push -m "config tweak"'},
+        {cmd:'git stash list'},
+        {cmd:'git stash apply stash@{1}'},
+        {cmd:'git stash drop stash@{1}'},
+      ],
+      touched: ['pagination/paginate.py','auth/auth.py','cart/cart.py','config/settings.py'] } },
 ]};
 
 /* ---------------------------------------------------------- fast-forward */
@@ -3201,7 +3412,16 @@ S['ff-merge'] = { frames: [
           <li><code>git switch main</code> — and don't commit anything on main in between.</li>
           <li><code>git merge feature/cart-currency</code> and read the output carefully.</li>
         </ul>
-        <div class="exercise-check">✓ Check: the merge output literally says <code>Fast-forward</code>, and <code>git log --oneline</code> shows no new merge commit — just main's pointer sitting at your feature branch's last commit.</div>` } },
+        <div class="exercise-check">✓ Check: the merge output literally says <code>Fast-forward</code>, and <code>git log --oneline</code> shows no new merge commit — just main's pointer sitting at your feature branch's last commit.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/cart-currency'},
+        {cmd:'git commit -am "cart: add currency field"'},
+        {cmd:'git commit -am "cart: format currency in totals"'},
+        {cmd:'git switch main'},
+        {cmd:'git merge feature/cart-currency'},
+        {out:'Updating a1a001..c3f2ee\nFast-forward'},
+      ],
+      touched: ['cart/cart.py'] } },
 ]};
 
 /* ------------------------------------------------------------ three-way */
@@ -3242,7 +3462,17 @@ S['threeway-merge'] = { frames: [
           <li>Merge: <code>git merge feature/auth-2fa</code>.</li>
           <li>Inspect the result with <code>git log --graph --oneline</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git show --no-patch --format=%P HEAD</code> prints two hashes — the merge commit has two parents, and both original commits are still fully intact in the graph.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git show --no-patch --format=%P HEAD</code> prints two hashes — the merge commit has two parents, and both original commits are still fully intact in the graph.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/auth-2fa'},
+        {cmd:'git commit -am "auth: add 2fa check"'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "pricing: fix rounding"'},
+        {cmd:'git merge feature/auth-2fa'},
+        {cmd:'git log --graph --oneline'},
+        {cmd:'git show --no-patch --format=%P HEAD'},
+      ],
+      touched: ['auth/auth.py','pricing/pricing.py'] } },
 ]};
 
 /* --------------------------------------------------------------- rebase */
@@ -3293,7 +3523,21 @@ S['rebase-basic'] = { frames: [
           <li>Run <code>git rebase main</code>.</li>
           <li>Run <code>git log --oneline</code> again and compare the two pagination commits' hashes to what you noted before.</li>
         </ul>
-        <div class="exercise-check">✓ Check: same messages, same file changes, completely different hashes — and <code>git log --graph --all</code> shows one straight line, not a fork.</div>` } },
+        <div class="exercise-check">✓ Check: same messages, same file changes, completely different hashes — and <code>git log --graph --all</code> shows one straight line, not a fork.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/reporting'},
+        {cmd:'git commit -am "pagination: add page-size option"'},
+        {cmd:'git commit -am "pagination: clamp page-size"'},
+        {cmd:'git log --oneline'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "config: add REPORTS_ENABLED flag"'},
+        {cmd:'git commit -am "config: default REPORTS_ENABLED to false"'},
+        {cmd:'git switch feature/reporting'},
+        {cmd:'git rebase main'},
+        {cmd:'git log --oneline'},
+        {cmd:'git log --graph --all'},
+      ],
+      touched: ['pagination/paginate.py','config/settings.py'] } },
 ]};
 
 /* ---------------------------------------------------------- squash-merge */
@@ -3331,7 +3575,20 @@ S['squash-merge'] = { frames: [
           <li>Run <code>git status</code> — notice it's staged but <b>not</b> committed.</li>
           <li>Commit once with a real message.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git log --oneline</code> shows exactly one new commit on main, and <code>git show --no-patch --format=%P HEAD</code> shows a single parent — the branch's history never merged in.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --oneline</code> shows exactly one new commit on main, and <code>git show --no-patch --format=%P HEAD</code> shows a single parent — the branch's history never merged in.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/catalog-filter'},
+        {cmd:'git commit -am "wip"'},
+        {cmd:'git commit -am "wip 2"'},
+        {cmd:'git commit -am "wip fix lint"'},
+        {cmd:'git switch main'},
+        {cmd:'git merge --squash feature/catalog-filter'},
+        {cmd:'git status'},
+        {cmd:'git commit -m "catalog: add price-range filter"'},
+        {cmd:'git log --oneline'},
+        {cmd:'git show --no-patch --format=%P HEAD'},
+      ],
+      touched: ['catalog/listing.py'] } },
 ]};
 
 /* ------------------------------------------------------- squash-rebase */
@@ -3379,7 +3636,17 @@ S['squash-rebase'] = { frames: [
           <li>Run <code>git rebase -i HEAD~3</code>. In the editor, leave the first line as <code>pick</code> and change the other two to <code>squash</code>.</li>
           <li>Save and quit — a second editor opens for the combined message. Delete the placeholder text and write one real message.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git log --oneline</code> on this branch now shows one commit instead of three, with the message you wrote by hand.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --oneline</code> on this branch now shows one commit instead of three, with the message you wrote by hand.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/catalog-sort'},
+        {cmd:'git commit -am "wip"'},
+        {cmd:'git commit -am "wip 2"'},
+        {cmd:'git commit -am "wip fix lint"'},
+        {cmd:'git rebase -i HEAD~3'},
+        {comment:'in the editor: pick / squash / squash, save+quit, then write the real message'},
+        {cmd:'git log --oneline'},
+      ],
+      touched: ['catalog/listing.py'] } },
 ]};
 
 /* ------------------------------------------------------- conflict-merge */
@@ -3410,7 +3677,15 @@ S['conflict-merge'] = { frames: [
   { cap: "🔧 Setup — get two branches disagreeing about the same line.",
     exercise: { kind:'setup', title: "Diverge on config/settings.py",
       html: `<p>In <code>mini-shop</code>: from <code>main</code>, <code>git switch -c feature/config-tune</code> and commit a change to the value of <code>TIMEOUT_SECONDS</code> in <code>config/settings.py</code>. Then <code>git switch main</code> and commit a <b>different</b> value for that same line, directly on main.</p>
-        <div class="exercise-check">✓ Check: <code>git diff main feature/config-tune -- config/settings.py</code> shows both sides touched the exact same line differently.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git diff main feature/config-tune -- config/settings.py</code> shows both sides touched the exact same line differently.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/config-tune'},
+        {cmd:'git commit -am "config: bump timeout to 45"'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "config: bump timeout to 60"'},
+        {cmd:'git diff main feature/config-tune -- config/settings.py'},
+      ],
+      touched: ['config/settings.py'] } },
   { cap: "🏋 Your turn — merge them and resolve the conflict by hand.",
     exercise: { kind:'task', title: "Merge, read the markers, resolve, commit",
       html: `<p>Still on <code>main</code>: <code>git merge feature/config-tune</code>.</p>
@@ -3419,7 +3694,16 @@ S['conflict-merge'] = { frames: [
           <li>Pick a final value (or combine both), and delete the marker lines entirely — they're not valid code.</li>
           <li><code>git add config/settings.py</code>, then <code>git commit</code> to finish the merge.</li>
         </ul>
-        <div class="exercise-check">✓ Check: <code>git log --graph --oneline</code> shows a merge commit with two parents, and <code>config/settings.py</code> has no leftover <code>&lt;&lt;&lt;</code> markers.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --graph --oneline</code> shows a merge commit with two parents, and <code>config/settings.py</code> has no leftover <code>&lt;&lt;&lt;</code> markers.</div>` ,
+      shell: [
+        {cmd:'git merge feature/config-tune'},
+        {out:'CONFLICT (content): Merge conflict in config/settings.py'},
+        {comment:'edit config/settings.py — remove the <<<, ===, >>> markers'},
+        {cmd:'git add config/settings.py'},
+        {cmd:'git commit'},
+        {cmd:'git log --graph --oneline'},
+      ],
+      touched: ['config/settings.py'] } },
 ]};
 
 /* ------------------------------------------------------ conflict-rebase */
@@ -3465,7 +3749,15 @@ S['conflict-rebase'] = { frames: [
   { cap: "🔧 Setup — same disagreement, fresh branch names.",
     exercise: { kind:'setup', title: "Diverge again, this time for a rebase",
       html: `<p>Same idea as the merge exercise, new names so nothing collides: from <code>main</code>, <code>git switch -c feature/config-tune-2</code> and commit a change to a value in <code>config/settings.py</code>. Then <code>git switch main</code> and commit a <b>different</b> change to that same line.</p>
-        <div class="exercise-check">✓ Check: both branches modify the same line, differently — confirm with <code>git diff main feature/config-tune-2</code>.</div>` } },
+        <div class="exercise-check">✓ Check: both branches modify the same line, differently — confirm with <code>git diff main feature/config-tune-2</code>.</div>` ,
+      shell: [
+        {cmd:'git switch -c feature/config-tune-2'},
+        {cmd:'git commit -am "config: set RETRIES to 5"'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "config: set RETRIES to 2"'},
+        {cmd:'git diff main feature/config-tune-2'},
+      ],
+      touched: ['config/settings.py'] } },
   { cap: "🏋 Your turn — rebase onto main and resolve the conflict.",
     exercise: { kind:'task', title: "git rebase main, resolve, --continue",
       html: `<p>Switch to <code>feature/config-tune-2</code> — HEAD must be on the branch being rebased — then <code>git rebase main</code>.</p>
@@ -3474,7 +3766,17 @@ S['conflict-rebase'] = { frames: [
           <li><code>git add config/settings.py</code>, then <code>git rebase --continue</code>.</li>
           <li>Run <code>git log --oneline</code> and compare to how the merge exercise's history looked.</li>
         </ul>
-        <div class="exercise-check">✓ Check: unlike the merge, there's no merge commit here — the history is a straight line, and your commit's hash is different from what it was before the rebase.</div>` } },
+        <div class="exercise-check">✓ Check: unlike the merge, there's no merge commit here — the history is a straight line, and your commit's hash is different from what it was before the rebase.</div>` ,
+      shell: [
+        {cmd:'git switch feature/config-tune-2'},
+        {cmd:'git rebase main'},
+        {out:'CONFLICT (content): Merge conflict in config/settings.py'},
+        {comment:'edit config/settings.py — remove the markers'},
+        {cmd:'git add config/settings.py'},
+        {cmd:'git rebase --continue'},
+        {cmd:'git log --oneline'},
+      ],
+      touched: ['config/settings.py'] } },
 ]};
 
 /* ----------------------------------------------------- cherry-pick-basic */
@@ -3503,11 +3805,26 @@ S['cherry-pick-basic'] = { frames: [
   { cap: "🔧 Setup — an isolated fix on one branch, a second branch that needs it.",
     exercise: { kind:'setup', title: "One fix, two branches that don't share it",
       html: `<p>In <code>mini-shop</code>: from <code>main</code>, <code>git switch -c hotfix/pricing-rounding</code> and fix a rounding bug in <code>pricing/pricing.py</code> — commit it. Then <code>git switch main</code> and create <code>release/v1</code> from there, so it does <b>not</b> have the fix.</p>
-        <div class="exercise-check">✓ Check: <code>git log --oneline release/v1</code> does not include your rounding-fix commit.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --oneline release/v1</code> does not include your rounding-fix commit.</div>` ,
+      shell: [
+        {cmd:'git switch -c hotfix/pricing-rounding'},
+        {cmd:'git commit -am "pricing: fix rounding on totals"'},
+        {cmd:'git switch main'},
+        {cmd:'git switch -c release/v1'},
+        {cmd:'git log --oneline release/v1'},
+      ],
+      touched: ['pricing/pricing.py'] } },
   { cap: "🏋 Your turn — copy just that one commit onto release/v1.",
     exercise: { kind:'task', title: "cherry-pick the fix, without merging the whole branch",
       html: `<p><code>git switch release/v1</code>, find the fix commit's hash with <code>git log --oneline hotfix/pricing-rounding</code>, then <code>git cherry-pick &lt;hash&gt;</code>.</p>
-        <div class="exercise-check">✓ Check: <code>git log --oneline --all</code> shows the same fix message on both branches, but with <b>two different commit hashes</b> — cherry-pick copied it, it didn't move it.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git log --oneline --all</code> shows the same fix message on both branches, but with <b>two different commit hashes</b> — cherry-pick copied it, it didn't move it.</div>` ,
+      shell: [
+        {cmd:'git switch release/v1'},
+        {cmd:'git log --oneline hotfix/pricing-rounding'},
+        {cmd:'git cherry-pick <hash>'},
+        {cmd:'git log --oneline --all'},
+      ],
+      touched: ['pricing/pricing.py'] } },
 ]};
 
 /* -------------------------------------------------- cherry-pick-conflict */
@@ -3537,7 +3854,16 @@ S['cherry-pick-conflict'] = { frames: [
   { cap: "🔧 Setup — make both sides touch the exact same line this time.",
     exercise: { kind:'setup', title: "An overlapping fix, so the pick will conflict",
       html: `<p>From <code>main</code>, <code>git switch -c hotfix/cart-rounding</code> and change a specific line in <code>cart/cart.py</code>, commit it. Then <code>git switch main</code>, create <code>release/v2</code>, and on <code>release/v2</code> independently change that <b>same line</b> to something else, commit that too.</p>
-        <div class="exercise-check">✓ Check: <code>git diff hotfix/cart-rounding release/v2 -- cart/cart.py</code> shows the exact same line changed on both sides, differently.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git diff hotfix/cart-rounding release/v2 -- cart/cart.py</code> shows the exact same line changed on both sides, differently.</div>` ,
+      shell: [
+        {cmd:'git switch -c hotfix/cart-rounding'},
+        {cmd:'git commit -am "cart: fix rounding on subtotal"'},
+        {cmd:'git switch main'},
+        {cmd:'git switch -c release/v2'},
+        {cmd:'git commit -am "cart: round subtotal to nearest cent"'},
+        {cmd:'git diff hotfix/cart-rounding release/v2 -- cart/cart.py'},
+      ],
+      touched: ['cart/cart.py'] } },
   { cap: "🏋 Your turn — cherry-pick into a conflict, then resolve it.",
     exercise: { kind:'task', title: "cherry-pick, hit the conflict, add + --continue",
       html: `<p><code>git switch release/v2</code>, then <code>git cherry-pick &lt;hotfix commit hash&gt;</code>.</p>
@@ -3545,7 +3871,16 @@ S['cherry-pick-conflict'] = { frames: [
           <li>It will conflict — read the markers in <code>cart/cart.py</code> exactly like a merge or rebase conflict.</li>
           <li>Resolve by hand, <code>git add cart/cart.py</code>, then <code>git cherry-pick --continue</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: the resolution flow felt identical to the rebase conflict exercise — that's the point: cherry-pick conflicts resolve exactly the same way.</div>` } },
+        <div class="exercise-check">✓ Check: the resolution flow felt identical to the rebase conflict exercise — that's the point: cherry-pick conflicts resolve exactly the same way.</div>` ,
+      shell: [
+        {cmd:'git switch release/v2'},
+        {cmd:'git cherry-pick <hotfix commit hash>'},
+        {out:'CONFLICT (content): Merge conflict in cart/cart.py'},
+        {comment:'edit cart/cart.py — resolve the markers'},
+        {cmd:'git add cart/cart.py'},
+        {cmd:'git cherry-pick --continue'},
+      ],
+      touched: ['cart/cart.py'] } },
 ]};
 
 /* -------------------------------------------------------- restore-source */
@@ -3573,7 +3908,17 @@ S['restore-source'] = { frames: [
           <li><code>git status</code> — confirm it shows as an ordinary uncommitted modification, nothing more.</li>
           <li>Either commit it as a normal change, or run <code>git restore cart/cart.py</code> (no <code>--source</code>) to throw it away and keep main's version.</li>
         </ul>
-        <div class="exercise-check">✓ Check: at no point did <code>git branch --show-current</code> change, and <code>git log --oneline</code> gained no commit until you explicitly committed.</div>` } },
+        <div class="exercise-check">✓ Check: at no point did <code>git branch --show-current</code> change, and <code>git log --oneline</code> gained no commit until you explicitly committed.</div>` ,
+      shell: [
+        {cmd:'git branch --show-current'},
+        {cmd:'git restore --source=release/v1 -- cart/cart.py'},
+        {cmd:'git status'},
+        {comment:'either commit it…'},
+        {cmd:'git commit -am "cart: adopt release/v1 rounding"'},
+        {comment:'…or throw it away instead'},
+        {cmd:'git restore cart/cart.py'},
+      ],
+      touched: ['cart/cart.py'] } },
 ]};
 
 /* -------------------------------------------------------- remote-basic */
@@ -3614,7 +3959,12 @@ S['remote-basic'] = { frames: [
   { cap: "🔧 Setup — simulate a teammate without needing an actual one.",
     exercise: { kind:'setup', title: "Clone your own repo a second time",
       html: `<p>Outside your <code>mini-shop</code> folder, run <code>git clone &lt;your-origin-url&gt; mini-shop-teammate</code>. You now have two independent local clones of the same remote — clone A (your original) and clone B (the "teammate"). This is what makes fetch/pull/push exercises real instead of imagined for the rest of the course.</p>
-        <div class="exercise-check">✓ Check: <code>git remote -v</code> in <code>mini-shop-teammate</code> points at the same GitHub URL as your original.</div>` } },
+        <div class="exercise-check">✓ Check: <code>git remote -v</code> in <code>mini-shop-teammate</code> points at the same GitHub URL as your original.</div>` ,
+      shell: [
+        {cmd:'cd ..'},
+        {cmd:'git clone <your-origin-url> mini-shop-teammate'},
+        {cmd:'cd mini-shop-teammate && git remote -v'},
+      ] } },
   { cap: "🏋 Your turn — push, then fetch and pull a real remote change.",
     exercise: { kind:'task', title: "Push from A, push from B, sync A",
       html: `<p>From clone A: commit a small change to <code>catalog/listing.py</code> and <code>git push origin main</code>.</p>
@@ -3623,7 +3973,21 @@ S['remote-basic'] = { frames: [
           <li>Back in clone A: <code>git fetch origin</code>, then inspect <code>origin/main</code> vs. your local <code>main</code> before touching anything.</li>
           <li><code>git pull origin main</code> and confirm it fast-forwards.</li>
         </ul>
-        <div class="exercise-check">✓ Check: in clone A, <code>git log --oneline -1</code> shows clone B's commit, and the pull output said <code>Fast-forward</code> — nothing of yours was there to conflict with.</div>` } },
+        <div class="exercise-check">✓ Check: in clone A, <code>git log --oneline -1</code> shows clone B's commit, and the pull output said <code>Fast-forward</code> — nothing of yours was there to conflict with.</div>` ,
+      shell: [
+        {comment:'in clone A'},
+        {cmd:'git commit -am "catalog: fix listing sort order"'},
+        {cmd:'git push origin main'},
+        {comment:'in clone B'},
+        {cmd:'git pull'},
+        {cmd:'git commit -am "auth: tighten session expiry"'},
+        {cmd:'git push origin main'},
+        {comment:'back in clone A'},
+        {cmd:'git fetch origin'},
+        {cmd:'git log --oneline main..origin/main'},
+        {cmd:'git pull origin main'},
+      ],
+      touched: ['catalog/listing.py','auth/auth.py'] } },
 ]};
 
 /* -------------------------------------------------------- diverge-check */
@@ -3671,7 +4035,15 @@ S['diverge-check'] = { frames: [
   { cap: "🔧 Setup — make both clones commit before syncing.",
     exercise: { kind:'setup', title: "Create a genuine divergence between clone A and clone B",
       html: `<p>Using the two clones from the previous exercise: in clone A, commit a change to <code>pricing/pricing.py</code> but <b>don't push it yet</b>. In clone B, commit a different change (e.g. <code>config/settings.py</code>) and push it to <code>origin</code>.</p>
-        <div class="exercise-check">✓ Check: clone A now has one local-only commit, and origin has one commit clone A doesn't have — real divergence, not simulated.</div>` } },
+        <div class="exercise-check">✓ Check: clone A now has one local-only commit, and origin has one commit clone A doesn't have — real divergence, not simulated.</div>` ,
+      shell: [
+        {comment:'in clone A — do not push'},
+        {cmd:'git commit -am "pricing: add bulk-discount tier"'},
+        {comment:'in clone B'},
+        {cmd:'git commit -am "config: add BULK_DISCOUNT flag"'},
+        {cmd:'git push origin main'},
+      ],
+      touched: ['pricing/pricing.py','config/settings.py'] } },
   { cap: "🏋 Your turn — diagnose before you act.",
     exercise: { kind:'task', title: "Read git status, then pick pull or pull --rebase",
       html: `<p>In clone A: <code>git fetch origin</code>, then <code>git status</code> — read the message word for word.</p>
@@ -3679,7 +4051,14 @@ S['diverge-check'] = { frames: [
           <li>If it says "diverged, and have X and Y different commits" — that's real divergence. Resolve with <code>git pull --rebase origin main</code> to keep history linear (only reach for this on branches that are yours alone).</li>
           <li>Confirm afterward with <code>git log --oneline --graph</code> that both commits exist, one replayed on top of the other.</li>
         </ul>
-        <div class="exercise-check">✓ Check: you made the pull/rebase decision from the actual git status message, not from assuming — that's the whole exercise.</div>` } },
+        <div class="exercise-check">✓ Check: you made the pull/rebase decision from the actual git status message, not from assuming — that's the whole exercise.</div>` ,
+      shell: [
+        {cmd:'git fetch origin'},
+        {cmd:'git status'},
+        {cmd:'git pull --rebase origin main'},
+        {cmd:'git log --oneline --graph'},
+      ],
+      touched: ['pricing/pricing.py'] } },
 ]};
 
 /* -------------------------------------------------------- full-picture */
@@ -3704,7 +4083,15 @@ S['full-picture'] = { frames: [
   { cap: "🏋 Your turn — closed book, one change, start to finish.",
     exercise: { kind:'task', title: "Run the whole loop unaided",
       html: `<p>Without looking back at earlier slides: in <code>mini-shop</code>, take <b>one</b> change through the entire loop on your own. Edit <code>README.md</code> with a real update, then <code>add</code>, <code>commit</code>, and <code>push</code> it — narrating out loud (or in a notes file) what each command does and which of the five areas it moves the file through.</p>
-        <div class="exercise-check">✓ Check: you can verify the commit landed by opening your repo on GitHub directly, without re-checking any slide.</div>` } },
+        <div class="exercise-check">✓ Check: you can verify the commit landed by opening your repo on GitHub directly, without re-checking any slide.</div>` ,
+      shell: [
+        {comment:'edit README.md, then narrate each step as you go'},
+        {cmd:'git status'},
+        {cmd:'git add README.md'},
+        {cmd:'git commit -m "docs: update project overview"'},
+        {cmd:'git push origin main'},
+      ],
+      touched: ['README.md'] } },
 ]};
 
 /* ================================================================
@@ -3767,7 +4154,30 @@ S['process-squash'] = { frames: [
           <li>Before opening a PR, tidy up: <code>git rebase -i main</code> and squash your follow-up commit into the first one — but leave clone B's commit as <code>pick</code>, since it isn't yours to rewrite.</li>
           <li>Push with <code>git push --force-with-lease</code>.</li>
         </ul>
-        <div class="exercise-check">✓ Check: the final push succeeds, your branch has one clean commit of yours plus clone B's untouched one, and you can explain out loud why <code>--force-with-lease</code> was safe here.</div>` } },
+        <div class="exercise-check">✓ Check: the final push succeeds, your branch has one clean commit of yours plus clone B's untouched one, and you can explain out loud why <code>--force-with-lease</code> was safe here.</div>` ,
+      shell: [
+        {comment:'clone A'},
+        {cmd:'git switch -c feature/checkout-discount'},
+        {comment:'edit cart/cart.py; accidentally git add a scratch file too'},
+        {cmd:'git add .'},
+        {cmd:'git restore --staged scratch.py'},
+        {cmd:'git commit -m "cart: apply checkout discount code"'},
+        {cmd:'git commit -am "cart: fix discount rounding"'},
+        {comment:'clone B — same branch name, pushes first'},
+        {cmd:'git switch -c feature/checkout-discount'},
+        {cmd:'git commit -am "cart: add discount code validation"'},
+        {cmd:'git push origin feature/checkout-discount'},
+        {comment:'back in clone A'},
+        {cmd:'git push origin feature/checkout-discount'},
+        {out:'! [rejected]'},
+        {cmd:'git fetch origin'},
+        {cmd:'git status'},
+        {cmd:'git pull --rebase origin feature/checkout-discount'},
+        {cmd:'git rebase -i main'},
+        {comment:'squash your follow-up fixup into your first commit; leave clone B\'s as pick'},
+        {cmd:'git push --force-with-lease origin feature/checkout-discount'},
+      ],
+      touched: ['cart/cart.py'] } },
 ]};
 
 /* ================================================================
@@ -3840,7 +4250,35 @@ S['process-rebase'] = { frames: [
     exercise: { kind:'task', title: "Two conflicts, two clean recoveries",
       html: `<p><b>Part 1 — rebase abort/retry:</b> from <code>main</code>, <code>git switch -c feature/auth-limits</code>, commit a change to <code>config/settings.py</code>. Meanwhile advance <code>main</code> with a different change to that same line. Run <code>git rebase main</code>, hit the conflict, then <code>git rebase --abort</code>. Retry with <code>git rebase main</code> again — same conflict comes back — and this time resolve it properly with <code>add</code> + <code>--continue</code>.</p>
         <p><b>Part 2 — cherry-pick abort/reset under pressure:</b> create <code>hotfix/auth-header</code> off <code>main</code>, editing the <b>same line</b> in <code>auth/auth.py</code> that <code>feature/auth-limits</code> also touches. From <code>feature/auth-limits</code>, <code>git cherry-pick</code> the hotfix commit — it conflicts. Back out cleanly with <code>git cherry-pick --abort</code> (and <code>git reset --hard</code> only if a stray edit is still sitting in your working tree). Retry the cherry-pick and resolve it for real this time.</p>
-        <div class="exercise-check">✓ Check: in both parts, the retry hit the <b>identical</b> conflict — nothing about the code changed, only the abandoned attempt did. That's the whole lesson.</div>` } },
+        <div class="exercise-check">✓ Check: in both parts, the retry hit the <b>identical</b> conflict — nothing about the code changed, only the abandoned attempt did. That's the whole lesson.</div>` ,
+      shell: [
+        {comment:'part 1 — rebase abort/retry'},
+        {cmd:'git switch -c feature/auth-limits'},
+        {cmd:'git commit -am "auth: add per-IP rate limit"'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "auth: add global rate limit"'},
+        {cmd:'git switch feature/auth-limits'},
+        {cmd:'git rebase main'},
+        {out:'CONFLICT (content): Merge conflict in config/settings.py'},
+        {cmd:'git rebase --abort'},
+        {cmd:'git rebase main'},
+        {comment:'same conflict — resolve for real this time'},
+        {cmd:'git add config/settings.py'},
+        {cmd:'git rebase --continue'},
+        {comment:'part 2 — cherry-pick abort/reset under pressure'},
+        {cmd:'git switch -c hotfix/auth-header'},
+        {cmd:'git commit -am "auth: fix header parsing"'},
+        {cmd:'git switch feature/auth-limits'},
+        {cmd:'git cherry-pick <hotfix/auth-header commit hash>'},
+        {out:'CONFLICT (content): Merge conflict in auth/auth.py'},
+        {cmd:'git cherry-pick --abort'},
+        {cmd:'git reset --hard HEAD'},
+        {cmd:'git cherry-pick <hotfix/auth-header commit hash>'},
+        {comment:'same conflict — resolve for real this time'},
+        {cmd:'git add auth/auth.py'},
+        {cmd:'git cherry-pick --continue'},
+      ],
+      touched: ['config/settings.py','auth/auth.py'] } },
 ]};
 
 /* ================================================================
@@ -3890,7 +4328,28 @@ S['process-mergepr'] = { frames: [
           <li>Refresh the PR on GitHub and confirm it now shows mergeable.</li>
           <li>Merge it using <b>Squash and merge</b> from the GitHub UI.</li>
         </ul>
-        <div class="exercise-check">✓ Check: the PR is merged, main has one clean squashed commit for your change, and you resolved the conflict locally before GitHub would let you merge — not in the web editor.</div>` } },
+        <div class="exercise-check">✓ Check: the PR is merged, main has one clean squashed commit for your change, and you resolved the conflict locally before GitHub would let you merge — not in the web editor.</div>` ,
+      shell: [
+        {comment:'clone A'},
+        {cmd:'git switch -c feature/cart-currency-2'},
+        {cmd:'git commit -am "cart: switch totals to cents"'},
+        {cmd:'git push -u origin feature/cart-currency-2'},
+        {comment:'open a PR against main on GitHub'},
+        {comment:'clone B'},
+        {cmd:'git switch main'},
+        {cmd:'git commit -am "cart: switch totals to whole dollars"'},
+        {cmd:'git push origin main'},
+        {comment:'back in clone A'},
+        {cmd:'git fetch origin'},
+        {cmd:'git merge origin/main'},
+        {out:'CONFLICT (content): Merge conflict in cart/cart.py'},
+        {comment:'edit cart/cart.py, resolve the markers'},
+        {cmd:'git add cart/cart.py'},
+        {cmd:'git commit -m "merge main into feature/cart-currency-2"'},
+        {cmd:'git push origin feature/cart-currency-2'},
+        {comment:'on GitHub: confirm mergeable, then Squash and merge'},
+      ],
+      touched: ['cart/cart.py'] } },
 ]};
 
 </script>
