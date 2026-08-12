@@ -947,19 +947,7 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
-    <!-- SLIDE 3 — MENTAL MODEL -->
-    <section class="slide" data-section="fundamentals">
-      <div class="slide-inner">
-        <div class="slide-head">
-          <span class="eyebrow blue">Fundamentals</span>
-          <h1 class="title">Five places a file can live</h1>
-          <h2 class="subtitle">Almost every Git command just moves content between these areas. Learn the map once, and every command becomes a sentence: "move this from A to B."</h2>
-        </div>
-        <div class="scene" data-scene="mental-model" data-layout="full" data-term="the five areas"></div>
-      </div>
-    </section>
-
-    <!-- SLIDE 4 — COMMAND ANATOMY -->
+    <!-- SLIDE 3 — COMMAND ANATOMY -->
     <section class="slide" data-section="fundamentals">
       <div class="slide-inner">
         <div class="slide-head">
@@ -1007,7 +995,7 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
-    <!-- SLIDE 5 — REPO INIT / .git STRUCTURE -->
+    <!-- SLIDE 4 — REPO INIT / .git STRUCTURE -->
     <section class="slide" data-section="fundamentals">
       <div class="slide-inner">
         <div class="slide-head">
@@ -1050,7 +1038,7 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
-    <!-- SLIDE 6 — WORKSPACE TO COMMIT -->
+    <!-- SLIDE 5 — WORKSPACE TO COMMIT -->
     <section class="slide" data-section="workspace → commit">
       <div class="slide-inner">
         <div class="slide-head">
@@ -1059,6 +1047,18 @@ table.cmp code{ font-size:.85em; }
           <h2 class="subtitle">The loop you'll run hundreds of times a day. Step through it and watch the workspace, staging area and commit graph react.</h2>
         </div>
         <div class="scene" data-scene="workspace-to-commit" data-layout="areas-commit" data-term="~/app"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 — MENTAL MODEL -->
+    <section class="slide" data-section="fundamentals">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow blue">Fundamentals</span>
+          <h1 class="title">Five places a file can live</h1>
+          <h2 class="subtitle">Almost every Git command just moves content between these areas. Learn the map once, and every command becomes a sentence: "move this from A to B."</h2>
+        </div>
+        <div class="scene" data-scene="mental-model" data-layout="full" data-term="the five areas"></div>
       </div>
     </section>
 
@@ -1994,7 +1994,7 @@ function sceneTemplate(layout, ds){
   else if(layout==='graph') top = localGraph;
   else if(layout==='graph-conflict') top = `<div class="cols c2-wide" style="flex:1;min-height:0;">${localGraph}${conflictBox}</div>`;
   else if(layout==='remote') top = `<div class="cols c2" style="flex:1;min-height:0;">${localGraphSmall}${remoteGraphSmall}</div>`;
-  else if(layout==='full') top = `<div class="areas with-stash">${areaBoxes.workspace}${areaBoxes.staging}${areaBoxes.stash}<div class="area local"><div class="area-head"><span class="sw"></span>Local (HEAD)</div><div class="area-body local-list"></div></div><div class="area remote"><div class="area-head"><span class="sw"></span>Remote</div><div class="area-body remote-list"></div></div></div>`;
+  else if(layout==='full') top = `<div class="areas with-stash">${areaBoxes.workspace}${areaBoxes.staging}<div class="area local"><div class="area-head"><span class="sw"></span>Local (HEAD)</div><div class="area-body local-list"></div></div><div class="area remote"><div class="area-head"><span class="sw"></span>Remote</div><div class="area-body remote-list"></div></div>${areaBoxes.stash}</div>`;
 
   // wider layouts (nested side-by-side panels, or 5-up areas) need more room for the chart side
   const topFlex = (layout==='graph-conflict' || layout==='remote' || layout==='areas-stash-remote') ? 1.7 : (layout==='full' ? 1.5 : 1.15);
@@ -3071,12 +3071,12 @@ S['mental-model'] = { frames: [
   { cap: "③ <b>Local repository</b> — permanent, hashed snapshots. <code>git commit</code> turns the staged draft into one.",
     areas: { staging: [], local: [{id:'a1b2c3d — add app.py',status:'clean'}] },
     term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'} ] },
-  { cap: "④ <b>Stash</b> — a side shelf for uncommitted work you're not ready to commit (it never enters history).",
-    areas: { stash: ['stash@{0}: WIP on main: quick experiment'] },
-    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'out', text:"# after that commit, you start a quick experiment in app.py — edits you don't want to commit yet"}, {type:'cmd', text:'git stash'} ] },
-  { cap: "⑤ <b>Remote</b> — a copy of this repository hosted elsewhere, like GitHub. <code>git push</code> sends commits there.",
+  { cap: "④ <b>Remote</b> — a copy of this repository hosted elsewhere, like GitHub. <code>git push</code> sends commits there.",
     areas: { remote: [{id:'a1b2c3d — add app.py',status:'clean'}] },
-    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git stash'}, {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   (new) -> main'} ] },
+    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   (new) -> main'} ] },
+  { cap: "⑤ <b>Stash</b> — a side shelf for uncommitted work you're not ready to commit (it never enters history). Unlike the first four, it isn't a stop along the main path — it comes straight off the workspace, independent of staging or HEAD, which is why it's kept separate here rather than sitting between them.",
+    areas: { stash: ['stash@{0}: WIP on main: quick experiment'] },
+    term: [ {type:'out', text:'# you edit app.py in your editor — nothing else knows yet'}, {type:'cmd', text:'git add app.py'}, {type:'cmd', text:'git commit -m "add app.py"'}, {type:'out', text:'[main a1b2c3d] add app.py'}, {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   (new) -> main'}, {type:'out', text:"# later, you start a quick experiment in app.py — edits you don't want to commit yet"}, {type:'cmd', text:'git stash'} ] },
   { cap: "🔧 Setup — build the project every later exercise in this course reuses.",
     exercise: { kind:'setup', title: "Create your mini-shop practice project (do this once)",
       html: `<p>Every exercise from here on happens inside <b>one project you build now</b> — a tiny fictional store called <code>mini-shop</code>. Real modules, real branches, real conflicts, reused all course long.</p>
@@ -3112,18 +3112,18 @@ S['mental-model'] = { frames: [
           <li>Edit <code>catalog/listing.py</code> — add a second trivial line or function. (Workspace)</li>
           <li><code>git add catalog/listing.py</code>. (Staging area)</li>
           <li><code>git commit -m "catalog: add second listing helper"</code>. (Local repository)</li>
-          <li>Without committing, make an unrelated, throwaway edit to <code>pricing/pricing.py</code> and <code>git stash</code> it. (Stash)</li>
           <li><code>git push origin main</code> to send your catalog commit to GitHub. (Remote)</li>
+          <li>Without committing, make an unrelated, throwaway edit to <code>pricing/pricing.py</code> and <code>git stash</code> it. (Stash)</li>
         </ul>
         <div class="exercise-check">✓ Check: your commit shows on GitHub, <code>git stash list</code> shows one entry, and <code>git status</code> is clean except for that stash.</div>` ,
       shell: [
         {comment:'edit catalog/listing.py in your editor'},
         {cmd:'git add catalog/listing.py'},
         {cmd:'git commit -m "catalog: add second listing helper"'},
+        {cmd:'git push origin main'},
         {comment:'now an unrelated, throwaway edit'},
         {cmd:'git stash'},
         {out:'Saved working directory and index state WIP on main: … catalog: add second listing helper'},
-        {cmd:'git push origin main'},
       ],
       touched: ['catalog/listing.py','pricing/pricing.py'] } },
 ]};
