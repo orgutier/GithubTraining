@@ -2499,8 +2499,16 @@ const GIT_DOCS = {
     flags:{ '.': 'Stage everything new, modified, or deleted in and below the current directory.', '-p': 'Interactively choose which hunks within a file to stage, instead of the whole file at once.' }
   },
   branch: {
-    desc:'Lists, creates, or deletes branches. With no arguments, lists local branches. With just a name, creates a new pointer at the current commit — it does not switch to it.',
-    flags:{ '-d': 'Delete a branch — refuses if it has commits that aren\'t reachable from anywhere else yet, to avoid silently losing work.', '-D': 'Force-delete a branch, even if it has unmerged work. Use with care.' }
+    desc:'Lists, creates, deletes, or renames branches. With no arguments, lists local branches (the current one marked with *). With just a name, creates a new pointer at the current commit — it does not switch to it.',
+    flags:{
+      '-v': 'Verbose listing — show each branch\'s latest commit hash and message alongside its name.',
+      '-a': 'List every branch, local and remote-tracking (e.g. origin/main) together.',
+      '-r': 'List only remote-tracking branches (e.g. origin/main) — bookmarks for what a remote looked like as of your last fetch, not branches you commit to directly.',
+      '--show-current': 'Print just the name of the branch currently checked out, nothing else — handy in scripts.',
+      '-d': 'Delete a branch — refuses if it has commits that aren\'t reachable from anywhere else yet, to avoid silently losing work.',
+      '-D': 'Force-delete a branch, even if it has unmerged work. Use with care.',
+      '-m': 'Rename a branch (git branch -m <old> <new>) — same commits and history, just a new pointer name.'
+    }
   },
   'cherry-pick': {
     desc:'Applies the changes introduced by one existing commit onto your current branch, as a brand-new commit with a new hash. The original commit is untouched — this copies, it never moves or deletes.',
@@ -3312,6 +3320,22 @@ S['branching'] = { frames: [
   { cap: "<code>git switch -c</code> does both steps <i>at once</i>: create the pointer <b>and</b> move HEAD there, in a single command — branching <code>hotfix/typo</code> off <code>main</code>, since that's where HEAD is <i>now</i>.",
     local: { branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'},{name:'hotfix/typo',commitId:'c3f001',color:'red',stack:1}], head:{type:'branch',ref:'hotfix/typo'} },
     term: [ {type:'cmd', text:'git switch -c hotfix/typo'}, {type:'out', text:"Switched to a new branch 'hotfix/typo'"} ] },
+  { cap: "Lost track of what exists? <code>git branch</code> with no arguments lists every <b>local</b> branch — <code>*</code> marks the one you're on.",
+    term: [ {type:'cmd', text:'git branch'}, {type:'out', text:'  feature/search\n  main\n<span class="o-green">* hotfix/typo</span>'} ] },
+  { cap: "<code>-v</code> adds each branch's latest commit; <code>--show-current</code> prints just the current one — useful in scripts, where you need the bare name, not the whole list.",
+    term: [ {type:'cmd', text:'git branch -v'}, {type:'out', text:'  feature/search  e51b3d wip: ranking\n  main            c3f001 add search\n<span class="o-green">* hotfix/typo      c3f001 add search</span>'},
+             {type:'cmd', text:'git branch --show-current'}, {type:'out', text:'hotfix/typo'} ] },
+  { cap: "Is the <code>/</code> in <code>hotfix/typo</code> special? Not to Git's logic — a branch name is just a string. But Git stores each local branch as a <b>file</b> under <code>.git/refs/heads/</code>, so a slash creates a real subfolder: <code>refs/heads/hotfix/typo</code>. Prefixes like <code>feature/</code>, <code>hotfix/</code>, <code>release/</code> are a <b>team convention</b> for organizing and filtering branches — Git just happens to turn that convention into an actual folder on disk.",
+    term: [ {type:'cmd', text:'find .git/refs/heads -type f'}, {type:'out', text:'.git/refs/heads/main\n.git/refs/heads/feature/search\n.git/refs/heads/hotfix/typo'} ] },
+  { cap: "One consequence of that file-based storage: you can't have a branch named <code>hotfix</code> <b>and</b> <code>hotfix/typo</code> at the same time — <code>refs/heads/hotfix</code> would have to be both a file and a folder. Git refuses the second one.",
+    term: [ {type:'cmd', text:'git branch hotfix'}, {type:'out', text:"<span class=\"o-red\">error: cannot lock ref 'refs/heads/hotfix': 'refs/heads/hotfix/typo' exists; cannot create 'refs/heads/hotfix'</span>"} ] },
+  { cap: "Imagine <code>main</code> was already pushed to GitHub earlier. <code>git push origin main</code> takes <b>two separate arguments</b> — the remote's name (<code>origin</code>) and the branch (<code>main</code>). <code>origin/main</code> — one token, with a slash — is something else: a <b>remote-tracking branch</b>, your local bookmark for where <code>main</code> stood on <code>origin</code> as of your last fetch/push. It moves only via <code>fetch</code>/<code>pull</code>/<code>push</code> — you never commit to it directly.",
+    local: { branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'feature/search',commitId:'e51b3d',color:'green'},{name:'hotfix/typo',commitId:'c3f001',color:'red',stack:1},{name:'origin/main',commitId:'c3f001',color:'violet',stack:2}] },
+    term: [ {type:'cmd', text:'git push origin main'}, {type:'out', text:"# 'origin' and 'main' — two separate arguments: &lt;remote&gt; &lt;branch&gt;"},
+             {type:'cmd', text:'git branch -r'}, {type:'out', text:'origin/main'}, {type:'out', text:"# one token — your local bookmark for origin's main, not something you commit to"} ] },
+  { cap: "Cleaning up: <code>git branch -d</code> deletes a branch, but only if it's fully merged — Git protects you from losing commits by accident. Capital <code>-D</code> forces it through anyway. <code>git branch -m &lt;old&gt; &lt;new&gt;</code> renames one — same commits, same history, just a new pointer name.",
+    term: [ {type:'cmd', text:'git branch -d feature/search'}, {type:'out', text:"<span class=\"o-red\">error: the branch 'feature/search' is not fully merged</span>\nhint: use -D to force"},
+             {type:'cmd', text:'git branch -m hotfix/typo hotfix/readme-typo'}, {type:'out', text:'# renamed, nothing else changed'} ] },
   { cap: "🏋 Your turn — prove branches are just pointers.",
     exercise: { kind:'task', title: "Branch, diverge, and branch again from the right place",
       html: `<p>In <code>mini-shop</code>, on <code>main</code>:</p>
@@ -3320,7 +3344,9 @@ S['branching'] = { frames: [
           <li>Make two separate commits there, both touching <code>catalog/listing.py</code>.</li>
           <li><code>git switch main</code> — deliberately, before doing anything else.</li>
           <li>From <code>main</code>, create <code>hotfix/catalog-typo</code> with <code>switch -c</code>.</li>
+          <li>Run <code>git branch -v</code> and confirm you can read off every branch's latest commit at a glance.</li>
           <li>Run <code>git log --oneline --all --graph</code> and confirm <code>hotfix/catalog-typo</code> branches off <code>main</code>'s tip, <b>not</b> off <code>feature/catalog-search</code>.</li>
+          <li>Rename it: <code>git branch -m hotfix/catalog-typo hotfix/catalog-readme-typo</code> — then confirm with <code>git branch</code> that the commits didn't change, only the name did.</li>
         </ul>
         <div class="exercise-check">✓ Check: if you'd skipped the "switch main" step, the graph would show hotfix branching off feature/catalog-search instead — that's the mistake this drill is built to catch.</div>` ,
       shell: [
@@ -3331,7 +3357,10 @@ S['branching'] = { frames: [
         {cmd:'git commit -am "catalog: tune search ranking"'},
         {cmd:'git switch main'},
         {cmd:'git switch -c hotfix/catalog-typo'},
+        {cmd:'git branch -v'},
         {cmd:'git log --oneline --all --graph'},
+        {cmd:'git branch -m hotfix/catalog-typo hotfix/catalog-readme-typo'},
+        {cmd:'git branch'},
       ],
       touched: ['catalog/listing.py'] } },
 ]};
