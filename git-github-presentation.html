@@ -1086,6 +1086,18 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 6d — REVERT -->
+    <section class="slide" data-section="workspace → commit">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow green">Core loop</span>
+          <h1 class="title"><code style="font-size:.85em;">git revert</code> — undo a shared commit, safely</h1>
+          <h2 class="subtitle"><code>reset</code> and <code>revert</code> both undo a commit, but only one is safe once that commit is pushed: <code>revert</code> adds a new, inverse commit instead of rewriting history anyone else may already have.</h2>
+        </div>
+        <div class="scene" data-scene="revert-basics" data-layout="graph" data-term="~/app"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 7 — BRANCHING -->
     <section class="slide" data-section="branching">
       <div class="slide-inner">
@@ -1502,6 +1514,55 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 25b — GIT HOOKS: LOCAL VS REMOTE -->
+    <section class="slide" data-section="hooks">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Automation</span>
+          <h1 class="title">Git hooks — scripts Git runs for you</h1>
+          <h2 class="subtitle">A hook is just an executable script Git calls automatically at a specific point in the commit/push lifecycle. Two families: ones that run on your machine, and ones that run on the server holding the shared repo.</h2>
+        </div>
+        <div class="stack grow scroll-y">
+          <div class="cols c2" style="flex:none;">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>Client-side (local) hooks — run on your machine</div>
+              <ul class="bullets compact">
+                <li><code>pre-commit</code> — right before the commit message editor opens. Can block the commit entirely by exiting non-zero. Where linters, formatters, and a quick test run usually live.</li>
+                <li><code>commit-msg</code> — after you write a message, before the commit is created. Can reject a message that doesn't match a required format (e.g. a ticket-number prefix).</li>
+                <li><code>pre-push</code> — right before <code>git push</code> uploads anything. The last local chance to block — a good spot for a slower, fuller test-suite run.</li>
+                <li><code>post-checkout</code> / <code>post-merge</code> — after switching branches or merging. Often used to auto-install dependencies when a lockfile changed.</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>Server-side (remote) hooks — run on the shared repo</div>
+              <ul class="bullets compact">
+                <li><code>pre-receive</code> — before the server accepts <b>any</b> pushed refs. The one hook nobody can dodge with <code>--no-verify</code> — real enforcement lives here.</li>
+                <li><code>update</code> — like <code>pre-receive</code>, but runs once per branch being updated, so it can accept one branch and reject another in the same push.</li>
+                <li><code>post-receive</code> — after the push is already accepted. Can't block anything anymore — used for notifications, triggering CI, deploying.</li>
+                <li>GitHub doesn't let you drop scripts onto its servers — <b>branch protection rules</b> plus <b>required status checks</b> (GitHub Actions) are how it gives you that same enforcement.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>The catch: hooks aren't part of your repo</div>
+            <p class="lead"><code>.git/hooks/</code> lives inside <code>.git</code>, which Git never commits — clone the repo fresh, and any hand-written hook is gone with it. Two common fixes: point Git at a version-controlled folder with <code>git config core.hooksPath .githooks</code>, or reach for the popular <code>pre-commit</code> framework (yes, same name as the hook event — it's a separate, pip-installable tool that manages hook installation for you from a <code>.pre-commit-config.yaml</code> file that <i>is</i> committed).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25c — PYTEST PRE-COMMIT HOOK -->
+    <section class="slide" data-section="hooks">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Automation</span>
+          <h1 class="title">A basic <code style="font-size:.85em;">pytest</code> pre-commit hook</h1>
+          <h2 class="subtitle">Wire a failing test into the commit itself — no CI wait, no separate step to remember.</h2>
+        </div>
+        <div class="scene" data-scene="git-hooks-pytest" data-layout="graph-conflict" data-term="~/mini-shop" data-panel="tests/test_pricing.py / .git/hooks/pre-commit"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 26 — CHEATSHEET -->
     <section class="slide" data-section="reference">
       <div class="slide-inner pad-tight">
@@ -1568,8 +1629,8 @@ table.cmp code{ font-size:.85em; }
       <div class="slide-inner">
         <div class="slide-head">
           <span class="eyebrow violet">Test yourself</span>
-          <h1 class="title">36 questions — 23 core, 13 advanced</h1>
-          <h2 class="subtitle">Generic enough for a real interview screen: the first 23 gauge day-to-day fluency, the last 13 probe how a candidate handles history rewriting and recovery under pressure.</h2>
+          <h1 class="title">40 questions — 25 core, 15 advanced</h1>
+          <h2 class="subtitle">Generic enough for a real interview screen: the first 25 gauge day-to-day fluency, the last 15 probe how a candidate handles history rewriting and recovery under pressure.</h2>
         </div>
         <div class="quiz-app" data-quiz="main"></div>
       </div>
@@ -2122,6 +2183,7 @@ const PROJECT_TREE = [
   'pagination/paginate.py',
   'auth/auth.py',
   'config/settings.py',
+  'tests/test_pricing.py',
 ];
 
 function fileTree(opts){
@@ -2561,7 +2623,12 @@ const GIT_DOCS = {
   },
   revert: {
     desc:'Undoes the changes from a specific commit by creating a brand-new commit that applies the inverse diff. History stays intact, which makes it the safe way to undo something that\'s already been shared/pushed.',
-    flags:{}
+    flags:{
+      '-n': 'Stage the revert\'s changes without committing (--no-commit) — lets you fold several reverts into a single commit.',
+      '-m': 'Required when reverting a merge commit — picks which parent (1 = mainline) counts as the "keep" side.',
+      '--continue': 'After resolving a conflict from an in-progress revert and staging the fix, finish committing it.',
+      '--abort': 'Cancel an in-progress revert that hit a conflict, and restore the working tree to before it started.'
+    }
   },
   stash: {
     desc:'Shelves uncommitted changes (both staged and unstaged) off to the side, returning the working directory to a clean state matching HEAD. Useful for quickly switching context without committing half-finished work.',
@@ -2918,6 +2985,18 @@ const QUIZ_DATA = [
   { level:'advanced', topic:'amend vs reset --soft', q:'For undoing just the single most recent commit, <code>git commit --amend</code> is functionally closest to which reset flavor, followed by a recommit?',
     choices:['--hard','--mixed','--soft','None of them — amend is unrelated to reset'], correct:2,
     explain:'--soft moves HEAD back but leaves everything fully staged — recommitting right away reproduces exactly what amend does in one step, for that one commit.' },
+  { level:'basic', topic:'Where hooks live', q:'Where do a repository\'s Git hooks live by default, and what does that imply?',
+    choices:['In .githooks/, and they ARE committed with the repo','In .git/hooks/, which is never committed — a fresh clone won\'t have any hooks you wrote','In a hooks.json file tracked by Git','On GitHub\'s servers only'], correct:1,
+    explain:'.git/hooks/ lives inside the local .git folder, which Git never versions — hand-written hooks don\'t travel with clone/pull unless you deliberately share them (core.hooksPath, or a tool like the pre-commit framework).' },
+  { level:'basic', topic:'pre-commit vs pre-push', q:'What\'s the practical difference between a pre-commit hook and a pre-push hook?',
+    choices:['They run the exact same script under two names','pre-commit runs before each local commit is created; pre-push runs later, right before commits are uploaded to a remote','pre-push runs on GitHub\'s servers, pre-commit runs locally','pre-commit only works with GitHub Actions'], correct:1,
+    explain:'Both are client-side (local) hooks, but they fire at different points — pre-commit gates individual commits, pre-push gates the upload, which is why slower checks (e.g. a full test suite) are often saved for pre-push.' },
+  { level:'advanced', topic:'Local vs server-side hook enforcement', q:'Why can\'t a local pre-commit hook alone be trusted as a team\'s only quality gate?',
+    choices:['Local hooks can\'t run test suites','Anyone can skip it with git commit --no-verify, or simply never install it — only server-side hooks (or required CI checks) can\'t be bypassed that way','Local hooks are removed automatically after each commit','Git disables local hooks on shared branches'], correct:1,
+    explain:'--no-verify skips every local hook outright, and a hook that was never installed on someone\'s machine can\'t block anything. Real enforcement needs a server-side pre-receive hook or, on GitHub, required status checks.' },
+  { level:'advanced', topic:'Server-side hook enforcement', q:'Which Git hook is the one nobody can bypass with --no-verify?',
+    choices:['pre-commit','post-commit','pre-receive (server-side)','post-checkout'], correct:2,
+    explain:'--no-verify only skips client-side hooks running on your own machine. pre-receive runs on the server holding the shared repo, before it accepts any pushed refs — there\'s no local flag that can skip it.' },
 ];
 
 class QuizController{
@@ -3290,6 +3369,52 @@ S['reset-basics'] = { frames: [
         {cmd:'git reflog'},
       ],
       touched: ['auth/auth.py'] } },
+]};
+
+/* --------------------------------------------------------------- revert */
+S['revert-basics'] = { frames: [
+  { cap: "<code>main</code> has already been pushed — a teammate has pulled it, including the last commit. <code>origin/main</code> matches.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'feat: enable new pricing engine'}],
+             branches:[{name:'main',commitId:'b2b002',color:'blue'},{name:'origin/main',commitId:'b2b002',color:'violet',stack:1}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git log --oneline'}, {type:'out', text:'b2b002 (HEAD -> main, origin/main) feat: enable new pricing engine\na1a001 init'} ] },
+  { cap: "It's broken in production. The instinct might be <code>git reset --hard HEAD~1</code> — <b>don't</b>, here. Reset would rewrite what <code>main</code> means; your teammate's clone still has <code>b2b002</code>, so their next pull sees a scary divergence, or their next push silently reintroduces the bug.",
+    term: [ {type:'out', text:"# reset --hard HEAD~1 would work locally, but main is already shared —"}, {type:'out', text:"# your teammate's clone still points at b2b002. Don't rewrite public history."} ] },
+  { cap: "<code>git revert b2b002</code> instead: Git computes the <b>inverse</b> of that commit's diff and applies it as a brand-new commit. The bad commit stays exactly where it was — nothing is rewritten, only added to.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2b002',parents:['a1a001'],lane:0,order:1,color:'blue',label:'feat: enable new pricing engine'},{id:'c3c003',parents:['b2b002'],lane:0,order:2,color:'green',label:"Revert 'feat: enable new pricing engine'"}],
+             branches:[{name:'main',commitId:'c3c003',color:'green'},{name:'origin/main',commitId:'b2b002',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git revert b2b002'}, {type:'out', text:'[main c3c003] Revert "feat: enable new pricing engine"\n 1 file changed, 3 insertions(+), 3 deletions(-)'} ] },
+  { cap: "<code>git log</code> shows <b>both</b> commits, in order — the original bug and its fix are both part of the permanent record. Nothing is hidden, unlike a hard reset, which would eventually let the bad commit fall out of history via garbage collection.",
+    term: [ {type:'cmd', text:'git log --oneline'}, {type:'out', text:"c3c003 (HEAD -> main) Revert 'feat: enable new pricing engine'\nb2b002 (origin/main) feat: enable new pricing engine\na1a001 init"} ] },
+  { cap: "Push it — this is a plain fast-forward, no force needed. Your teammate's next <code>git pull</code> just picks up the fix normally.",
+    local: { branches:[{name:'main',commitId:'c3c003',color:'blue'},{name:'origin/main',commitId:'c3c003',color:'violet',stack:1}] },
+    term: [ {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   b2b002..c3c003  main -> main'} ] },
+  { cap: "Reverting a commit whose lines were since changed elsewhere can conflict too — same markers, same fix: resolve, <code>git add</code>, then <code>git revert --continue</code> (or <code>--abort</code> to cancel). It's structurally the same workflow as a cherry-pick or rebase conflict.",
+    term: [ {type:'cmd', text:'git revert a1a001'}, {type:'out', text:'<span class="o-red">CONFLICT (content): Merge conflict in pricing.py</span>\nerror: could not revert a1a001… init'},
+             {type:'cmd', text:'git add pricing.py'}, {type:'cmd', text:'git revert --continue'} ] },
+  { cap: "Two flags worth knowing: <code>-n</code> (<code>--no-commit</code>) stages the revert without committing — handy for folding several reverts into one commit. <code>-m 1</code> is required when reverting a <b>merge</b> commit, telling Git which parent side is \"mainline\" so it knows which direction to undo.",
+    term: [ {type:'cmd', text:'git revert -n b2b002 c3c003'}, {type:'out', text:'# both reverts staged, nothing committed yet — commit once, manually'},
+             {type:'cmd', text:'git revert -m 1 <merge-commit>'}, {type:'out', text:'# -m 1 = keep mainline\'s side, undo what the merged-in branch added'} ] },
+  { cap: "🏋 Your turn — revert a shared commit safely.",
+    exercise: { kind:'task', title: "git revert instead of reset, on a commit you've already pushed",
+      html: `<p>In <code>mini-shop</code>, on <code>main</code>:</p>
+        <ul class="bullets">
+          <li>Commit a change to <code>pricing/pricing.py</code> and <code>git push origin main</code> — this simulates a commit teammates have already pulled.</li>
+          <li>Find its hash with <code>git log --oneline -1</code>.</li>
+          <li>Run <code>git revert &lt;hash&gt;</code> — an editor opens with a pre-filled message (<code>Revert "..."</code>); save and close it as-is.</li>
+          <li><code>git log --oneline</code> and confirm <b>both</b> commits are visible, in order.</li>
+          <li><code>git push origin main</code> and confirm it's a plain fast-forward, no force needed.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: unlike the reset exercise earlier, nothing here required <code>--force</code> — that's the whole point of revert on shared history.</div>` ,
+      shell: [
+        {cmd:'git commit -am "pricing: try dynamic discount curve"'},
+        {cmd:'git push origin main'},
+        {cmd:'git log --oneline -1'},
+        {cmd:'git revert <hash>'},
+        {comment:'editor opens, pre-filled with Revert "..." — save and close'},
+        {cmd:'git log --oneline'},
+        {cmd:'git push origin main'},
+      ],
+      touched: ['pricing/pricing.py'] } },
 ]};
 
 /* ------------------------------------------------------------- branching */
@@ -4410,6 +4535,71 @@ S['process-mergepr'] = { frames: [
         {comment:'on GitHub: confirm mergeable, then Squash and merge'},
       ],
       touched: ['cart/cart.py'] } },
+]};
+
+/* ---------------------------------------------------------- git-hooks-pytest */
+S['git-hooks-pytest'] = { frames: [
+  { cap: "mini-shop already has a test for the pricing module — right now, nothing runs it automatically before a commit.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'add pricing + tests'}], branches:[{name:'main',commitId:'m1a001',color:'blue'}], head:{type:'branch',ref:'main'} },
+    conflict: '<span class="c-com"># tests/test_pricing.py</span>\ndef test_price_returns_subtotal():\n    order = FakeOrder(subtotal=42)\n    assert price(order) == 42',
+    term: [ {type:'cmd', text:'pytest -q'}, {type:'out', text:'1 passed in 0.02s'} ] },
+  { cap: "Write <code>.git/hooks/pre-commit</code> — a plain shell script. Git runs it automatically, every time, right before opening the commit-message editor. A non-zero exit code blocks the commit.",
+    conflict: '<span class="c-com">#!/bin/sh</span>\n<span class="c-com"># .git/hooks/pre-commit</span>\npytest -q\nexit $?',
+    term: [ {type:'cmd', text:'vim .git/hooks/pre-commit'}, {type:'out', text:'# paste the script above, save and quit'}, {type:'cmd', text:'chmod +x .git/hooks/pre-commit'} ] },
+  { cap: "Break something on purpose, then try to commit. Git runs the hook <b>before</b> the message editor even opens — pytest fails, the hook exits non-zero, and Git refuses to create the commit. Nothing lands in history.",
+    term: [ {type:'cmd', text:'git commit -am "pricing: tweak discount rounding"'},
+             {type:'out', text:'<span class="o-red">FAILED tests/test_pricing.py::test_price_returns_subtotal</span>\n<span class="o-red">1 failed in 0.03s</span>\n<span class="c-com"># hook exited non-zero — commit aborted, nothing created</span>'} ] },
+  { cap: "Fix the bug, commit again — pytest passes, the hook exits 0, and Git proceeds exactly as normal.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'add pricing + tests'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'pricing: fix discount rounding'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}] },
+    term: [ {type:'cmd', text:'git commit -am "pricing: fix discount rounding"'}, {type:'out', text:'1 passed in 0.02s'}, {type:'out', text:'[main m2b002] pricing: fix discount rounding'} ] },
+  { cap: "<code>--no-verify</code> skips every local hook — an escape hatch for real emergencies. It's also exactly why a local hook alone can't be your only safety net: anyone can bypass it, on purpose or by accident. That's what server-side hooks and required CI checks are for.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'add pricing + tests'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'pricing: fix discount rounding'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'amber',label:'hotfix: skip the check just this once'}], branches:[{name:'main',commitId:'m3c003',color:'amber'}] },
+    term: [ {type:'cmd', text:'git commit --no-verify -m "hotfix: skip the check just this once"'}, {type:'out', text:'[main m3c003] hotfix: skip the check just this once\n<span class="c-com"># pre-commit hook was NOT run</span>'} ] },
+  { cap: "Hand-written scripts in <code>.git/hooks/</code> aren't committed or shared automatically (previous slide). The common real-world fix is the <code>pre-commit</code> framework: a <code>.pre-commit-config.yaml</code> file you <b>do</b> commit, plus one command each teammate runs once.",
+    conflict: '<span class="c-com"># .pre-commit-config.yaml</span>\nrepos:\n  - repo: local\n    hooks:\n      - id: pytest\n        name: pytest\n        entry: pytest -q\n        language: system\n        pass_filenames: false',
+    term: [ {type:'cmd', text:'pip install pre-commit'}, {type:'cmd', text:'pre-commit install'}, {type:'out', text:'pre-commit installed at .git/hooks/pre-commit'} ] },
+  { cap: "🔧 Setup — add a test and wire up the hook.",
+    exercise: { kind:'setup', title: "Add a test file and write the pre-commit hook",
+      html: `<p>In <code>mini-shop</code>, on <code>main</code>:</p>
+        <ul class="bullets">
+          <li>Create <code>tests/test_pricing.py</code> with one small, passing test that imports and calls <code>pricing/pricing.py</code>'s <code>price()</code> function.</li>
+          <li>Confirm it passes on its own first: <code>pytest -q</code>.</li>
+          <li>Create <code>.git/hooks/pre-commit</code> containing <code>#!/bin/sh</code> then <code>pytest -q</code> then <code>exit $?</code>.</li>
+          <li>Make it executable: <code>chmod +x .git/hooks/pre-commit</code>.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: <code>ls -l .git/hooks/pre-commit</code> shows the executable bit set, and <code>pytest -q</code> passes on its own.</div>` ,
+      shell: [
+        {cmd:'mkdir tests'},
+        {cmd:'cat > tests/test_pricing.py'},
+        {comment:'paste a small passing test, then Ctrl-D'},
+        {cmd:'pytest -q'},
+        {cmd:'cat > .git/hooks/pre-commit'},
+        {comment:"#!/bin/sh / pytest -q / exit $?  — then Ctrl-D"},
+        {cmd:'chmod +x .git/hooks/pre-commit'},
+      ],
+      creating: ['tests/test_pricing.py'] } },
+  { cap: "🏋 Your turn — watch the hook block a broken commit, then let a fixed one through.",
+    exercise: { kind:'task', title: "Break it, get blocked, fix it, get through",
+      html: `<p>Using the hook you just set up:</p>
+        <ul class="bullets">
+          <li>Edit <code>pricing/pricing.py</code> so the test would fail (e.g. return the wrong value).</li>
+          <li>Try <code>git commit -am "…"</code> — confirm it's <b>refused</b>, and that <code>git log --oneline -1</code> still shows your previous commit.</li>
+          <li>Fix the bug for real, then commit again — confirm it goes through this time.</li>
+          <li>Finally, break it once more but commit with <code>git commit --no-verify -m "…"</code> — confirm the hook never ran and the bad commit landed anyway. Then fix it with one more commit.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: you can explain, out loud, why <code>--no-verify</code> proves a local hook is a convenience, not a guarantee.</div>` ,
+      shell: [
+        {comment:'break the test on purpose'},
+        {cmd:'git commit -am "pricing: tweak discount rounding"'},
+        {out:'FAILED tests/test_pricing.py::test_price_returns_subtotal'},
+        {cmd:'git log --oneline -1'},
+        {comment:'fix it for real'},
+        {cmd:'git commit -am "pricing: fix discount rounding"'},
+        {comment:'break it again, this time bypass the hook'},
+        {cmd:'git commit --no-verify -m "hotfix: skip the check just this once"'},
+        {cmd:'git commit -am "pricing: fix discount rounding again"'},
+      ],
+      touched: ['pricing/pricing.py','tests/test_pricing.py'] } },
 ]};
 
 </script>
