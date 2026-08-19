@@ -804,91 +804,6 @@ table.cmp code{ font-size:.85em; }
 .mini-progress span{ height:4px; flex:1; background:var(--border-lt); border-radius:2px; }
 .mini-progress span.on{ background:var(--amber); }
 
-/* ======================================================================
-   QUIZ
-   ====================================================================== */
-.quiz-app{ flex:1; min-height:0; display:flex; flex-direction:column; gap:16px; }
-.quiz-head{ display:flex; align-items:center; gap:16px; flex:none; }
-.quiz-badge{
-  font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
-  padding:5px 11px; border-radius:20px; border:1px solid var(--border-lt); color:var(--text-dim); flex:none;
-}
-.quiz-badge.basic{ color:var(--blue); border-color:var(--blue); background:rgba(108,182,255,.08); }
-.quiz-badge.advanced{ color:var(--red); border-color:var(--red); background:rgba(255,123,114,.08); }
-.quiz-progress-wrap{ flex:1; display:flex; flex-direction:column; gap:5px; }
-.quiz-progress-label{ font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint); display:flex; justify-content:space-between; }
-.quiz-progress-track{ height:6px; background:var(--panel-2); border-radius:3px; overflow:hidden; }
-.quiz-progress-fill{ height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); border-radius:3px; transition:width .3s ease; }
-.quiz-score{
-  font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text); flex:none;
-  background:var(--panel-2); border:1px solid var(--border-lt); border-radius:8px; padding:7px 14px;
-  display:flex; align-items:center; gap:7px;
-}
-.quiz-score .dotstat-mini{ width:8px; height:8px; border-radius:50%; background:var(--green); }
-
-.quiz-body{ flex:1; min-height:0; display:flex; flex-direction:column; gap:18px; justify-content:center; }
-.quiz-topic{ font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; }
-.quiz-q{ font-size:23px; font-weight:600; color:var(--text); line-height:1.4; max-width:980px; }
-.quiz-q code{ font-family:var(--font-mono); background:var(--panel-3); padding:1px 7px; border-radius:5px; font-size:.85em; color:var(--amber); }
-
-.quiz-choices{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.quiz-choice{
-  text-align:left; background:var(--panel); border:1.5px solid var(--border-lt); border-radius:10px;
-  padding:14px 16px; font-size:14.5px; color:var(--text-dim); cursor:pointer; font-family:var(--font-sans);
-  display:flex; align-items:center; gap:12px; transition:all .15s ease; line-height:1.4;
-}
-.quiz-choice:hover:not(.answered *){ border-color:var(--blue); color:var(--text); background:var(--panel-2); }
-.quiz-choice .qletter{
-  font-family:var(--font-mono); font-weight:700; font-size:12px; color:var(--text-faint);
-  width:22px; height:22px; border-radius:50%; border:1.5px solid var(--border-lt); flex:none;
-  display:flex; align-items:center; justify-content:center;
-}
-.quiz-choice .qdot{ width:9px; height:9px; border-radius:50%; flex:none; opacity:0; transition:opacity .15s ease; margin-left:auto; }
-.quiz-choices.answered .quiz-choice{ cursor:default; }
-.quiz-choices.answered .quiz-choice:not(.correct):not(.incorrect){ opacity:.45; }
-.quiz-choice.correct{ border-color:var(--green); background:rgba(126,231,135,.08); color:var(--text); }
-.quiz-choice.correct .qletter{ border-color:var(--green); color:var(--green); }
-.quiz-choice.correct .qdot{ opacity:1; background:var(--green); }
-.quiz-choice.incorrect{ border-color:var(--red); background:rgba(255,123,114,.08); color:var(--text); }
-.quiz-choice.incorrect .qletter{ border-color:var(--red); color:var(--red); }
-.quiz-choice.incorrect .qdot{ opacity:1; background:var(--red); }
-
-.quiz-explain{
-  background:var(--panel-2); border-left:3px solid var(--blue); border-radius:0 8px 8px 0;
-  padding:12px 16px; font-size:13.5px; color:var(--text-dim); line-height:1.6; display:none;
-}
-.quiz-explain.show{ display:block; animation:fadeIn .2s ease; }
-.quiz-explain b{ color:var(--text); }
-
-.quiz-nav{ display:flex; justify-content:flex-end; flex:none; }
-.quiz-next-btn{
-  font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--ink);
-  background:var(--green); border:none; border-radius:8px; padding:11px 22px; cursor:pointer;
-  opacity:0; pointer-events:none; transition:opacity .2s ease, transform .15s ease;
-}
-.quiz-next-btn.show{ opacity:1; pointer-events:auto; }
-.quiz-next-btn:active{ transform:scale(.96); }
-
-/* summary screen */
-.quiz-summary{ flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; text-align:center; }
-.quiz-summary-score{ font-family:var(--font-mono); font-size:64px; font-weight:800; color:var(--text); line-height:1; }
-.quiz-summary-score span{ font-size:28px; color:var(--text-faint); font-weight:600; }
-.quiz-summary-level{
-  font-family:var(--font-mono); font-size:13px; font-weight:700; padding:8px 18px; border-radius:20px;
-  border:1.5px solid var(--green); color:var(--green); background:rgba(126,231,135,.08);
-}
-.quiz-summary-note{ max-width:640px; color:var(--text-dim); font-size:14.5px; line-height:1.6; }
-.quiz-summary-bars{ display:flex; gap:28px; }
-.quiz-summary-bar-item{ display:flex; flex-direction:column; align-items:center; gap:6px; }
-.quiz-summary-bar-item .qb-label{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; }
-.quiz-summary-bar-item .qb-value{ font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--text); }
-.quiz-restart-btn{
-  font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text-dim);
-  background:var(--panel-2); border:1px solid var(--border-lt); border-radius:8px; padding:10px 20px; cursor:pointer;
-  transition:all .15s ease;
-}
-.quiz-restart-btn:hover{ border-color:var(--blue); color:var(--text); }
-
 </style>
 </head>
 <body>
@@ -1624,15 +1539,12 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
-    <!-- SLIDE 25 — QUIZ -->
+    <!-- SLIDE 25 — EXAM NOTICE -->
     <section class="slide" data-section="quiz">
-      <div class="slide-inner">
-        <div class="slide-head">
-          <span class="eyebrow violet">Test yourself</span>
-          <h1 class="title">40 questions — 25 core, 15 advanced</h1>
-          <h2 class="subtitle">Generic enough for a real interview screen: the first 25 gauge day-to-day fluency, the last 15 probe how a candidate handles history rewriting and recovery under pressure.</h2>
-        </div>
-        <div class="quiz-app" data-quiz="main"></div>
+      <div class="slide-inner center">
+        <span class="eyebrow violet">Test yourself</span>
+        <h1 class="title">A separate exam covers this material</h1>
+        <p class="title-sub">Everything in this deck — the mental model, branching, merge vs. rebase, conflicts, remotes, and the process walkthroughs — is fair game. The exam itself is administered separately.</p>
       </div>
     </section>
 
@@ -1721,7 +1633,6 @@ const Deck = {
   slides: [],
   idx: 0,
   scenes: new Map(), // sceneWrapperEl -> Scene instance
-  quizzes: new Map(), // quizWrapperEl -> QuizController instance
 
   init(){
     this.slides = Array.from(document.querySelectorAll('.slide'));
@@ -1782,7 +1693,6 @@ const Deck = {
     const s = this.slides[this.idx];
     if(!s){ sub.style.display='none'; clearSubDots(); return; }
     const sceneEl = s.querySelector('[data-scene]');
-    const quizEl = s.querySelector('[data-quiz]');
     if(sceneEl){
       const scene = this.scenes.get(sceneEl);
       if(scene && scene.frames.length){
@@ -1825,16 +1735,6 @@ const Deck = {
       }
     }
     clearSubDots();
-    if(quizEl){
-      const quiz = this.quizzes.get(quizEl);
-      if(quiz){
-        const total = (window.QUIZ_DATA||[]).length;
-        const q = Math.min(quiz.i+1, total);
-        sub.textContent = quiz.i>=total ? `Results` : `Question ${q} / ${total}`;
-        sub.style.display = 'inline-block';
-        return;
-      }
-    }
     sub.style.display = 'none';
   },
 
@@ -1847,7 +1747,6 @@ const Deck = {
     s.classList.add('active');
     this.updateChrome();
     this.activateScenesIn(s);
-    this.activateQuizIn(s);
   },
 
   next(){
@@ -1890,15 +1789,6 @@ const Deck = {
         this.scenes.set(w, scene);
       }
       scene.reset();
-    });
-  },
-
-  activateQuizIn(slideEl){
-    const wrappers = slideEl.querySelectorAll('[data-quiz]');
-    wrappers.forEach(w=>{
-      if(!this.quizzes.get(w)){
-        this.quizzes.set(w, new QuizController(w)); // persists progress across revisits; use the in-quiz Restart button to reset
-      }
     });
   },
 
@@ -2871,240 +2761,6 @@ function renderGraph(svg, g, storeRoot, key, tagStoreRoot){
     head.style.opacity = hp ? '1' : '0';
   } else if(head){ head.style.opacity='0'; }
 }
-
-/* ============================= QUIZ DATA + CONTROLLER ============================= */
-const QUIZ_DATA = [
-  // ---------------- BASIC / MID (20) ----------------
-  { level:'basic', topic:'Snapshots vs diffs', q:'For every commit, what does Git actually store?',
-    choices:['A diff against the previous commit','A full snapshot of the entire tracked tree','Only the files that changed, as patches','A pointer to the files on the last commit'], correct:1,
-    explain:'Git stores a full snapshot each time (efficiently, via shared unchanged files) — not a diff chain like older version control systems.' },
-  { level:'basic', topic:'Staging', q:'What does <code>git add &lt;file&gt;</code> actually do?',
-    choices:['Commits the file to history','Moves a snapshot of the file into the staging area','Uploads the file to the remote','Creates a new branch containing the file'], correct:1,
-    explain:'<code>git add</code> stages a snapshot of the file\'s current content — it doesn\'t commit, and it never touches the remote.' },
-  { level:'basic', topic:'Mental model', q:'In Git\'s mental model, what sits between your working files and the local repository?',
-    choices:['The stash','The staging area (index)','The remote','The reflog'], correct:1,
-    explain:'The staging area is the rehearsal space — exactly what you <code>git add</code> is exactly what the next commit will contain.' },
-  { level:'basic', topic:'branch vs switch -c', q:'What\'s the difference between <code>git branch feature</code> and <code>git switch -c feature</code>?',
-    choices:['They\'re identical in every way','<code>git branch</code> only creates the pointer; <code>switch -c</code> creates it and moves HEAD there','<code>switch -c</code> only works on remote branches','<code>git branch</code> moves HEAD, <code>switch -c</code> does not'], correct:1,
-    explain:'<code>git branch</code> just creates the pointer. <code>git switch -c</code> does both steps — create and check out — in one command.' },
-  { level:'basic', topic:'Fast-forward', q:'When does Git perform a fast-forward merge instead of creating a merge commit?',
-    choices:['Whenever git merge is run, always','When the target branch hasn\'t moved since the feature branch diverged','Only when there\'s a conflict','Only when using --squash'], correct:1,
-    explain:'If the target branch\'s tip is a direct ancestor of the incoming branch, Git just slides the pointer forward — no new commit needed.' },
-  { level:'basic', topic:'Three-way merge', q:'Why does merging two diverged branches create a commit with two parents?',
-    choices:['It\'s required by Git\'s file format','Because both branches moved independently, and the merge commit records both histories','Because rebase always does this','To make git log faster'], correct:1,
-    explain:'A merge commit has two parents precisely because it\'s joining two independent lines of history.' },
-  { level:'basic', topic:'Stash', q:'What does <code>git stash</code> do?',
-    choices:['Permanently deletes uncommitted changes','Commits changes to a temporary branch','Shelves uncommitted changes and returns the workspace to a clean state','Pushes changes to the remote'], correct:2,
-    explain:'Stash is a pocket beside the workspace — changes are saved, and the working tree returns to match HEAD.' },
-  { level:'basic', topic:'Resolving conflicts', q:'After a merge conflict, what are the core steps to resolve it?',
-    choices:['Delete the file, then git add','Edit out the conflict markers, git add the file, then commit (or --continue)','git reset --hard, then try again','git push --force to skip it'], correct:1,
-    explain:'Edit to keep the correct content and remove the markers, stage it, then finish the operation.' },
-  { level:'basic', topic:'Conflict markers', q:'What does the content between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> and <code>=======</code> represent?',
-    choices:['The incoming branch\'s version','Your current branch\'s version','A deleted section','Nothing — it\'s just decoration'], correct:1,
-    explain:'Everything from the HEAD marker down to the separator is your side; everything after, down to the closing marker, is the incoming side.' },
-  { level:'basic', topic:'fetch vs pull', q:'What\'s the difference between <code>git fetch</code> and <code>git pull</code>?',
-    choices:['They\'re the same command','fetch downloads new commits/refs without merging them in; pull fetches and then integrates','pull only works on the main branch','fetch deletes local changes'], correct:1,
-    explain:'fetch is the safe, look-before-you-leap step. pull = fetch + integrate immediately.' },
-  { level:'basic', topic:'Push rejection', q:'Why would <code>git push</code> be rejected with a "fetch first" hint?',
-    choices:['Your commit message is too long','The remote has commits your local branch doesn\'t have','You forgot to run git init','The file is too large'], correct:1,
-    explain:'Someone else pushed to the same branch first — fetch and integrate their work before your push can land.' },
-  { level:'basic', topic:'Remote-tracking branch', q:'What does <code>origin/main</code> represent?',
-    choices:['A second local branch','Your local record of where the remote\'s main was, as of the last fetch','The very first commit ever made','A tag'], correct:1,
-    explain:'It\'s a remote-tracking branch — a local bookmark for where main was on the remote last time you talked to it.' },
-  { level:'basic', topic:'git log', q:'What does <code>git log --oneline</code> show?',
-    choices:['Every file ever changed','One compact line per commit: short hash + message','Only the most recent commit','The full diff of every commit'], correct:1,
-    explain:'It\'s the compact view — one line per commit — good for scanning history quickly.' },
-  { level:'basic', topic:'Rebase changes hashes', q:'When a commit is replayed during a rebase — even with zero conflicts — what happens to its hash?',
-    choices:['It stays exactly the same','It always changes, because its parent changed and the hash depends on the parent','It only changes if the message changes','Git asks you to choose'], correct:1,
-    explain:'A commit\'s hash is derived from its content, including its parent. Change the parent, get a new hash — same content, different identity.' },
-  { level:'basic', topic:'merge --squash vs merge', q:'What\'s the key difference between <code>git merge --squash</code> and a plain <code>git merge</code>?',
-    choices:['--squash deletes the feature branch automatically','--squash stages the combined diff with no merge commit and no branch-as-parent; a plain merge creates a two-parent commit','They produce identical history','--squash can\'t handle conflicts'], correct:1,
-    explain:'Squash merge borrows the diff but not the history — main gets one flat commit with a single parent.' },
-  { level:'basic', topic:'Commit via editor', q:'Why might a developer run <code>git commit</code> without <code>-m</code>?',
-    choices:['It\'s required for the first commit ever','To write a longer, multi-line commit message in their configured editor','It automatically squashes commits','It skips the staging area'], correct:1,
-    explain:'Without -m, Git opens $EDITOR (often Vim) so you can write a full subject + body message.' },
-  { level:'basic', topic:'restore --staged', q:'What does <code>git restore --staged &lt;file&gt;</code> do?',
-    choices:['Deletes the file','Unstages the file, without touching its contents in the working directory','Commits the file','Downloads the file from the remote'], correct:1,
-    explain:'It\'s the modern way to undo a git add for one file — the edits stay right where they are, just unstaged.' },
-  { level:'basic', topic:'cherry-pick vs merge', q:'How does <code>git cherry-pick &lt;hash&gt;</code> differ from <code>git merge</code>?',
-    choices:['Cherry-pick applies one specific commit as a new commit; merge brings in an entire branch\'s history','They do the same thing','Cherry-pick deletes the original commit','Merge only works with one commit at a time'], correct:0,
-    explain:'Cherry-pick copies a single commit\'s diff onto your current branch — it never removes the original, and doesn\'t pull in the rest of that branch\'s history.' },
-  { level:'basic', topic:'Squash and merge (GitHub)', q:'On GitHub, what does clicking "Squash and merge" do?',
-    choices:['Deletes the PR without merging','Combines every commit in the PR into one new commit on the base branch','Force-pushes the PR branch','Automatically resolves all conflicts'], correct:1,
-    explain:'Same idea as git merge --squash — every commit on the branch folds into one tidy commit on main.' },
-  { level:'basic', topic:'Safe branch delete', q:'What does <code>git branch -d feature-x</code> (lowercase -d) refuse to do?',
-    choices:['Delete a branch that\'s already merged','Delete a branch with unmerged work that would become unreachable','Delete any branch, ever','Rename the branch'], correct:1,
-    explain:'The safe-delete flag checks first — if deleting would orphan commits, Git blocks it. -D force-deletes anyway.' },
-  { level:'basic', topic:'restore (discard)', q:'What does plain <code>git restore &lt;file&gt;</code> — no flag — do?',
-    choices:['Unstages the file without touching its content','Discards uncommitted changes in the working directory, reverting the file to match HEAD','Deletes the file from the repository entirely','Copies the file\'s content from another branch'], correct:1,
-    explain:'With no <code>--staged</code>, restore throws away working-directory edits — the destructive one of the two, and the opposite of <code>--staged</code>.' },
-  { level:'basic', topic:'commit --amend', q:'What does <code>git commit --amend</code> do?',
-    choices:['Creates a brand-new commit on top of the last one','Replaces the most recent commit with a new one, folding in whatever\'s currently staged and/or a new message','Renames the current branch','Squashes the last 3 commits into one'], correct:1,
-    explain:'Amend rewrites the tip commit in place — a lighter one-step alternative to <code>reset --soft</code> plus a recommit, for that single commit.' },
-  { level:'basic', topic:'Fast-forward or diverged?', q:'After <code>git fetch</code>, how do you know whether a plain pull will fast-forward or need a merge/rebase?',
-    choices:['You can\'t know until you try the pull','git status reports it directly — "behind, can be fast-forwarded" vs. "have diverged, and have X and Y commits"','Always assume it has diverged','Check the file sizes on each side'], correct:1,
-    explain:'git fetch never changes your branch, so it\'s always safe to check first — git status (or a two-dot git log range) says exactly which situation you\'re in.' },
-
-  // ---------------- ADVANCED (13) ----------------
-  { level:'advanced', topic:'Merge vs rebase history', q:'Fundamentally, how do merge and rebase differ in how they handle history?',
-    choices:['Merge rewrites commits; rebase never does','Merge preserves both branches\' commits and joins them; rebase rewrites your commits onto a new base, changing their hashes','They produce byte-identical results','Rebase always creates more commits than merge'], correct:1,
-    explain:'Merge is additive and non-destructive. Rebase replays — and rewrites — your commits, which is powerful but changes history.' },
-  { level:'advanced', topic:'The golden rule', q:'Why is it risky to rebase a branch that others have already pulled or built work on top of?',
-    choices:['It\'s not risky at all','Rebase deletes the remote copy automatically','Rebase gives commits new hashes, so anyone with the old ones gets duplicated/conflicting history','Rebase only works on private branches by design'], correct:2,
-    explain:'Once shared, a branch\'s commits are "public." Rewriting them orphans everyone else\'s copy — rebase local, merge shared.' },
-  { level:'advanced', topic:'Conflict resolution: merge vs rebase', q:'If a rebase replays 3 commits and 2 conflict, how does resolving that differ from the same overall change as a merge?',
-    choices:['Identical experience either way','Rebase surfaces a conflict once per replayed commit that conflicts (here: twice); a merge resolves it in one pass comparing final states','Merge always has more conflicts than rebase','Rebase can\'t handle multiple conflicting commits'], correct:1,
-    explain:'Merge conflicts happen once, comparing final states. Rebase can conflict repeatedly — once per commit being replayed.' },
-  { level:'advanced', topic:'reset --soft/--mixed/--hard', q:'What\'s the difference between <code>git reset --soft</code>, <code>--mixed</code>, and <code>--hard</code>?',
-    choices:['They only differ in speed','--soft moves HEAD and keeps changes staged; --mixed (default) moves HEAD and unstages; --hard moves HEAD and discards all changes','--hard is the safest option','--soft deletes commits from the reflog permanently'], correct:1,
-    explain:'Think of it as a dial: soft keeps the most (staged), mixed keeps changes but unstaged, hard throws working-directory changes away too.' },
-  { level:'advanced', topic:'revert vs reset', q:'Why is <code>git revert</code> generally preferred over <code>git reset</code> for undoing a commit that\'s already been pushed?',
-    choices:['Revert is faster to type','Revert creates a new commit that undoes the change, leaving history intact for anyone who already has the old commits; reset rewrites history','Reset only works on remote branches','There\'s no meaningful difference'], correct:1,
-    explain:'Revert adds to history instead of rewriting it — exactly what you want once a commit is shared.' },
-  { level:'advanced', topic:'Reflog', q:'What is <code>git reflog</code>, and when would you reach for it?',
-    choices:['A log of remote pushes only','A local record of everywhere HEAD has pointed — useful for recovering commits after a bad reset or rebase','A list of all tags','A GitHub-only feature'], correct:1,
-    explain:'Reflog tracks HEAD\'s movements locally, even ones a rebase or reset just made "unreachable" — usually recoverable for a while.' },
-  { level:'advanced', topic:'--force vs --force-with-lease', q:'What\'s the difference between <code>git push --force</code> and <code>--force-with-lease</code>?',
-    choices:['No real difference','--force-with-lease only pushes if the remote branch still matches what you last fetched — it won\'t silently clobber someone else\'s new commits','--force is safer','--force-with-lease cannot be used after a rebase'], correct:1,
-    explain:'--force-with-lease adds a safety check: if the remote moved since your last fetch, it refuses instead of overwriting blindly.' },
-  { level:'advanced', topic:'squash vs fixup', q:'In an interactive rebase, what\'s the difference between marking a commit <code>squash</code> versus <code>fixup</code>?',
-    choices:['They\'re identical','Both fold into the commit above, but squash lets you edit the combined message; fixup silently discards the fixup commit\'s message','fixup creates a new branch','squash can only be used on the first commit'], correct:1,
-    explain:'Same merging behavior, different message handling — fixup is for silent cleanup commits you never want to see in the log.' },
-  { level:'advanced', topic:'cherry-pick --abort', q:'A cherry-pick hits a conflict and you decide not to resolve it right now. What cleanly backs it out?',
-    choices:['git commit --amend','git cherry-pick --abort','git branch -D','There\'s no way to cancel a cherry-pick'], correct:1,
-    explain:'--abort cleanly cancels the in-progress cherry-pick and restores the pre-pick state.' },
-  { level:'advanced', topic:'Why squash merge has one parent', q:'Why does <code>git merge --squash</code> NOT record the feature branch as a parent of the resulting commit?',
-    choices:['It\'s a bug in Git','It only borrows the combined diff — it deliberately doesn\'t merge the branch\'s history, just its content','Squash merges are never committed','GitHub blocks it'], correct:1,
-    explain:'That\'s the whole point of squash merge: adopt the code, not the branch\'s commit history.' },
-  { level:'advanced', topic:'restore --source', q:'What does <code>git restore --source=release -- config.py</code> do while you\'re on <code>main</code>?',
-    choices:['Switches to the release branch','Merges release into main','Copies just that file\'s content from release into your workspace — no switch, no merge, no new commit','Deletes config.py from the release branch'], correct:2,
-    explain:'It\'s a workspace-only operation — the commit graph never moves. Compare to cherry-pick, which copies an entire commit.' },
-  { level:'advanced', topic:'Stash indices are LIFO', q:'You stash uncommitted work twice in a row — first "feature work," later "config tweak." What is <code>stash@{1}</code> now?',
-    choices:['The config tweak, since it was stashed second','The feature work — indices are LIFO, so the newest push is always @{0}, and everything older shifts up by one','There\'s no way to tell without running git stash list first','Whichever stash touches more files'], correct:1,
-    explain:'Stash is newest-first, just like the reflog: @{0} is always the most recent push, so an older stash silently moves from @{0} to @{1} once a new one lands on top of it.' },
-  { level:'advanced', topic:'amend vs reset --soft', q:'For undoing just the single most recent commit, <code>git commit --amend</code> is functionally closest to which reset flavor, followed by a recommit?',
-    choices:['--hard','--mixed','--soft','None of them — amend is unrelated to reset'], correct:2,
-    explain:'--soft moves HEAD back but leaves everything fully staged — recommitting right away reproduces exactly what amend does in one step, for that one commit.' },
-  { level:'basic', topic:'Where hooks live', q:'Where do a repository\'s Git hooks live by default, and what does that imply?',
-    choices:['In .githooks/, and they ARE committed with the repo','In .git/hooks/, which is never committed — a fresh clone won\'t have any hooks you wrote','In a hooks.json file tracked by Git','On GitHub\'s servers only'], correct:1,
-    explain:'.git/hooks/ lives inside the local .git folder, which Git never versions — hand-written hooks don\'t travel with clone/pull unless you deliberately share them (core.hooksPath, or a tool like the pre-commit framework).' },
-  { level:'basic', topic:'pre-commit vs pre-push', q:'What\'s the practical difference between a pre-commit hook and a pre-push hook?',
-    choices:['They run the exact same script under two names','pre-commit runs before each local commit is created; pre-push runs later, right before commits are uploaded to a remote','pre-push runs on GitHub\'s servers, pre-commit runs locally','pre-commit only works with GitHub Actions'], correct:1,
-    explain:'Both are client-side (local) hooks, but they fire at different points — pre-commit gates individual commits, pre-push gates the upload, which is why slower checks (e.g. a full test suite) are often saved for pre-push.' },
-  { level:'advanced', topic:'Local vs server-side hook enforcement', q:'Why can\'t a local pre-commit hook alone be trusted as a team\'s only quality gate?',
-    choices:['Local hooks can\'t run test suites','Anyone can skip it with git commit --no-verify, or simply never install it — only server-side hooks (or required CI checks) can\'t be bypassed that way','Local hooks are removed automatically after each commit','Git disables local hooks on shared branches'], correct:1,
-    explain:'--no-verify skips every local hook outright, and a hook that was never installed on someone\'s machine can\'t block anything. Real enforcement needs a server-side pre-receive hook or, on GitHub, required status checks.' },
-  { level:'advanced', topic:'Server-side hook enforcement', q:'Which Git hook is the one nobody can bypass with --no-verify?',
-    choices:['pre-commit','post-commit','pre-receive (server-side)','post-checkout'], correct:2,
-    explain:'--no-verify only skips client-side hooks running on your own machine. pre-receive runs on the server holding the shared repo, before it accepts any pushed refs — there\'s no local flag that can skip it.' },
-];
-
-class QuizController{
-  constructor(root){
-    this.root = root;
-    this.i = 0;
-    this.answers = new Array(QUIZ_DATA.length).fill(null); // null | chosen index
-    this.render();
-  }
-  reset(){
-    this.i = 0;
-    this.answers = new Array(QUIZ_DATA.length).fill(null);
-    this.render();
-  }
-  score(level){
-    let s = 0;
-    QUIZ_DATA.forEach((q,idx)=>{ if((level==null||q.level===level) && this.answers[idx]===q.correct) s++; });
-    return s;
-  }
-  answeredCount(){ return this.answers.filter(a=>a!==null).length; }
-  totalScore(){ return this.score(null); }
-
-  choose(choiceIdx){
-    if(this.answers[this.i] !== null) return; // already answered
-    this.answers[this.i] = choiceIdx;
-    this.render();
-  }
-  next(){
-    if(this.i < QUIZ_DATA.length-1){ this.i++; this.render(); }
-    else { this.i = QUIZ_DATA.length; this.render(); } // move past last -> summary
-  }
-
-  render(){
-    if(this.i >= QUIZ_DATA.length){ this.renderSummary(); return; }
-    const q = QUIZ_DATA[this.i];
-    const answered = this.answers[this.i];
-    const total = QUIZ_DATA.length;
-    const letters = ['A','B','C','D'];
-
-    const choicesHtml = q.choices.map((c,idx)=>{
-      let cls = 'quiz-choice';
-      if(answered!==null){
-        if(idx===q.correct) cls += ' correct';
-        else if(idx===answered) cls += ' incorrect';
-      }
-      return `<button class="${cls}" data-idx="${idx}" ${answered!==null?'disabled':''}>
-        <span class="qletter">${letters[idx]}</span>
-        <span class="qtext">${c}</span>
-        <span class="qdot"></span>
-      </button>`;
-    }).join('');
-
-    this.root.innerHTML = `
-      <div class="quiz-head">
-        <span class="quiz-badge ${q.level==='advanced'?'advanced':'basic'}">${q.level==='advanced'?'Advanced':'Basic / Mid'}</span>
-        <div class="quiz-progress-wrap">
-          <div class="quiz-progress-label"><span>Question ${this.i+1} of ${total}</span><span>${q.topic}</span></div>
-          <div class="quiz-progress-track"><div class="quiz-progress-fill" style="width:${(this.i/total*100)}%"></div></div>
-        </div>
-        <div class="quiz-score"><span class="dotstat-mini"></span>${this.totalScore()} / ${this.answeredCount()} correct</div>
-      </div>
-      <div class="quiz-body">
-        <div class="quiz-q">${q.q}</div>
-        <div class="quiz-choices ${answered!==null?'answered':''}">${choicesHtml}</div>
-        <div class="quiz-explain ${answered!==null?'show':''}"><b>${answered===q.correct?'Correct.':'Not quite.'}</b> ${q.explain}</div>
-      </div>
-      <div class="quiz-nav"><button class="quiz-next-btn ${answered!==null?'show':''}">${this.i===total-1?'See results':'Next question'} →</button></div>
-    `;
-
-    this.root.querySelectorAll('.quiz-choice').forEach(btn=>{
-      btn.addEventListener('click', ()=> this.choose(Number(btn.dataset.idx)));
-    });
-    const nextBtn = this.root.querySelector('.quiz-next-btn');
-    if(nextBtn) nextBtn.addEventListener('click', ()=> this.next());
-    if(window.Deck && Deck.updateSubCounter) Deck.updateSubCounter();
-  }
-
-  renderSummary(){
-    const total = QUIZ_DATA.length;
-    const score = this.totalScore();
-    const basicScore = this.score('basic'), basicTotal = QUIZ_DATA.filter(q=>q.level==='basic').length;
-    const advScore = this.score('advanced'), advTotal = QUIZ_DATA.filter(q=>q.level==='advanced').length;
-    const pct = score/total;
-    let level, note;
-    if(pct >= 0.87){ level='Senior-ready'; note='Strong grasp of both day-to-day Git and the advanced workflows (rebase internals, recovery, safe force-pushing) that come up under pressure.'; }
-    else if(pct >= 0.67){ level='Solid mid-level'; note='Comfortable with the everyday workflow — branching, merging, conflicts. Worth sharpening the advanced topics (reset flavors, reflog, rebase golden rule) before a senior-level screen.'; }
-    else if(pct >= 0.40){ level='Growing / junior'; note='The fundamentals are taking shape, but core workflows need more repetition before relying on Git independently under deadline pressure.'; }
-    else { level='Early stage'; note='Spend more time with the basics — staging, committing, branching, and simple merges — before tackling rebase, cherry-pick, or history rewriting.'; }
-
-    this.root.innerHTML = `
-      <div class="quiz-summary">
-        <div class="quiz-summary-score">${score}<span> / ${total}</span></div>
-        <div class="quiz-summary-level">${level}</div>
-        <div class="quiz-summary-bars">
-          <div class="quiz-summary-bar-item"><span class="qb-value">${basicScore}/${basicTotal}</span><span class="qb-label">Basic · Mid</span></div>
-          <div class="quiz-summary-bar-item"><span class="qb-value">${advScore}/${advTotal}</span><span class="qb-label">Advanced</span></div>
-        </div>
-        <p class="quiz-summary-note">${note}</p>
-        <button class="quiz-restart-btn">⟲ Restart quiz</button>
-      </div>
-    `;
-    this.root.querySelector('.quiz-restart-btn').addEventListener('click', ()=> this.reset());
-    if(window.Deck && Deck.updateSubCounter) Deck.updateSubCounter();
-  }
-}
-window.QuizController = QuizController;
-window.QUIZ_DATA = QUIZ_DATA;
-
 
 /* expose */
 window.Deck = Deck;
