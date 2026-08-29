@@ -137,6 +137,7 @@ button{ font-family:inherit; cursor:pointer; }
 .slide h1.title .accent-green{ color:var(--green); }
 .slide h1.title .accent-red{ color:var(--red); }
 .slide h1.title .accent-violet{ color:var(--violet); }
+.slide h1.title .accent-amber{ color:var(--amber); }
 
 .slide h2.subtitle{
   font-family:var(--font-sans); font-weight:500; font-size:18px;
@@ -1025,6 +1026,30 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 7b — TAGS BASICS -->
+    <section class="slide" data-section="tags">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Tags</span>
+          <h1 class="title">A tag is the same pointer — <span class="accent-amber">frozen</span></h1>
+          <h2 class="subtitle">A branch pointer moves every time you commit. A tag points at one commit forever — the mental model for pinning a release, a milestone, or "the exact code that shipped."</h2>
+        </div>
+        <div class="scene" data-scene="tags-basic" data-layout="graph" data-term="~/app"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7c — PUBLISHING & VERSIONING TAGS -->
+    <section class="slide" data-section="tags">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow amber">Tags</span>
+          <h1 class="title">Tags don't push themselves</h1>
+          <h2 class="subtitle">A surprising gotcha: <code>git push</code> alone never sends tags. And once a tag is out in the world, you retract it in two places, not one.</h2>
+        </div>
+        <div class="scene" data-scene="tags-remote" data-layout="remote" data-term="~/app" data-local-label="Local repository" data-remote-label="Remote — origin (GitHub)"></div>
+      </div>
+    </section>
+
     <!-- SLIDE 8 — STASH -->
     <section class="slide" data-section="stash">
       <div class="slide-inner">
@@ -1478,6 +1503,126 @@ table.cmp code{ font-size:.85em; }
       </div>
     </section>
 
+    <!-- SLIDE 25d — SUBMODULES: WHAT IS ONE -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">A submodule is a repo, inside a repo</h1>
+          <h2 class="subtitle">Not a copy of the code — a live link to another repository's exact history, pinned at one commit. The superproject only ever remembers <i>which</i> commit, never the submodule's actual files.</h2>
+        </div>
+        <div class="stack grow scroll-y">
+          <div class="cols c2" style="flex:none;">
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>What the superproject actually tracks</div>
+              <ul class="bullets compact">
+                <li>A <code>.gitmodules</code> file — a normal, committed text file mapping each submodule's path to its URL (and optionally a branch to follow).</li>
+                <li>One special tree entry per submodule, mode <code>160000</code> — Git calls it a <b>gitlink</b>. It stores nothing but a 40-character commit SHA. Not the submodule's files, not a diff — just that one hash.</li>
+                <li>That's it. The submodule's entire commit history lives in its <b>own</b> <code>.git</code>, checked out into the path — the superproject never sees inside it.</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>.gitmodules — an example</div>
+              <pre class="conflict-block" style="position:static;min-height:0;">[submodule "vendor/ui-kit"]
+	path = vendor/ui-kit
+	url = https://github.com/acme/ui-kit.git
+	branch = main</pre>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--blue)"></span>When this earns its complexity</div>
+            <p class="lead">Good fit: a shared internal library used, at different pinned versions, by several independent repos — you want its full history separately, and each consumer to upgrade deliberately. Poor fit: something you'd rather manage with a package manager (npm, pip), or code that really belongs in the same repo. Submodules have a reputation for being fiddly — the next several slides are exactly the sharp edges that reputation is built on.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25e — SUBMODULES: CREATING ONE -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Adding a submodule</h1>
+          <h2 class="subtitle"><code>git submodule add</code> clones another repo into a path inside yours, and records exactly which commit it's pinned to.</h2>
+        </div>
+        <div class="scene" data-scene="submodule-add" data-layout="remote" data-term="~/mini-shop" data-local-label="Superproject — mini-shop" data-remote-label="Submodule — ui-kit"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25f — SUBMODULES: CLONING -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Cloning a repo that has submodules</h1>
+          <h2 class="subtitle">A plain <code>git clone</code> leaves every submodule folder <b>empty</b> — the gitlink comes along, the files don't.</h2>
+        </div>
+        <div class="scene" data-scene="submodule-clone" data-layout="remote" data-term="~/mini-shop" data-local-label="Superproject — mini-shop" data-remote-label="Submodule — ui-kit"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25g — SUBMODULES: DEINIT -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Emptying a submodule — without unlinking it</h1>
+          <h2 class="subtitle"><code>git submodule deinit</code> clears the working directory and local config. The project still knows the submodule exists — it's powered down, not removed.</h2>
+        </div>
+        <div class="scene" data-scene="submodule-deinit" data-layout="remote" data-term="~/mini-shop" data-local-label="Superproject — mini-shop" data-remote-label="Submodule — ui-kit"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25h — SUBMODULES: FULL REMOVAL -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Fully removing a submodule</h1>
+          <h2 class="subtitle">Deinit only powers it down. Unlinking it for good is a four-step teardown — miss one and Git remembers.</h2>
+        </div>
+        <div class="scene" data-scene="submodule-remove" data-layout="remote" data-term="~/mini-shop" data-local-label="Superproject — mini-shop" data-remote-label="Submodule — ui-kit"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25i — SUBMODULES: BRANCH SWITCHING -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Switching branches without losing submodule work</h1>
+          <h2 class="subtitle">A plain <code>git switch</code> never touches a submodule's checkout. One flag changes that completely — and it's easy to reach for by habit.</h2>
+        </div>
+        <div class="scene" data-scene="submodule-branch-switch" data-layout="remote" data-term="~/mini-shop" data-local-label="Superproject — mini-shop" data-remote-label="Submodule — ui-kit"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 25j — SUBMODULES: CHEAT SHEET -->
+    <section class="slide" data-section="submodules">
+      <div class="slide-inner">
+        <div class="slide-head">
+          <span class="eyebrow violet">Composing repos</span>
+          <h1 class="title">Living with submodules day to day</h1>
+          <h2 class="subtitle">A short reference for the commands you'll actually reach for once one is already in a project.</h2>
+        </div>
+        <div class="stack grow scroll-y">
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--violet)"></span>Everyday commands</div>
+            <ul class="bullets compact">
+              <li><code>git submodule status</code> — one line per submodule: its pinned SHA, and a prefix showing the state. Space = checked out exactly as pinned. <code>+</code> = checked-out commit differs from what's pinned (you're ahead, behind, or mid-edit). <code>-</code> = not initialized at all.</li>
+              <li><code>git submodule foreach '&lt;cmd&gt;'</code> — run one shell command inside every submodule. <code>git submodule foreach git status</code> is a good habit before a big superproject operation.</li>
+              <li><code>git diff --submodule</code> — instead of just "gitlink changed," shows the actual commit range the pin moved across.</li>
+              <li><code>git submodule update --remote</code> — advance a submodule to the latest tip of the branch <code>.gitmodules</code> says to follow, instead of whatever it's currently pinned to. Follow this with a commit in the superproject to record the new pin.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span class="sw" style="background:var(--amber)"></span>The trap: a submodule checks out a commit, not a branch</div>
+            <p class="lead">Every one of these operations leaves the submodule in <b>detached HEAD</b> by default — same state as checking out a tag. If you're about to make <b>new</b> commits inside a submodule, <code>cd</code> into it and <code>git checkout &lt;branch&gt;</code> (or <code>git switch &lt;branch&gt;</code>) <b>first</b>. Commit while detached, and the next <code>git submodule update</code> anywhere can silently move you off those commits — recoverable via the submodule's own reflog, but easy to lose track of.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- SLIDE 26 — CHEATSHEET -->
     <section class="slide" data-section="reference">
       <div class="slide-inner pad-tight">
@@ -1903,7 +2048,8 @@ function sceneTemplate(layout, ds){
   function graphPanel(kind, small){
     const isRemote = kind==='remote';
     const color = isRemote ? COLORS.violet : COLORS.blue;
-    const title = isRemote ? 'Remote — origin (GitHub)' : (small ? 'Local repo' : 'Local repository — commit graph');
+    const defaultTitle = isRemote ? 'Remote — origin (GitHub)' : (small ? 'Local repo' : 'Local repository — commit graph');
+    const title = (isRemote ? ds.remoteLabel : ds.localLabel) || defaultTitle;
     const cls = isRemote ? 'remote-graph' : 'local-graph';
     const svgCls = isRemote ? 'remote-svg' : 'local-svg';
     return `<div class="graph-wrap ${cls}${small?' small':''}">
@@ -2525,12 +2671,38 @@ const GIT_DOCS = {
     flags:{ 'list': 'Show every stashed entry currently on the stack.', 'pop': 'Re-apply the most recent stash to the working directory, then remove it from the stack.', 'apply': 'Re-apply a stash to the working directory, but keep it on the stack (doesn\'t remove it).', 'drop': 'Permanently delete a stash entry from the stack without applying it.' }
   },
   status: { desc:'Shows the current state: which branch you\'re on, and which files are staged, modified, or untracked.', flags:{} },
+  submodule: {
+    desc:'Manages nested repositories linked into this one at a specific commit — the superproject only ever records which commit, never the submodule\'s own files.',
+    flags:{
+      'add': 'Clone another repo into a path inside this one, checked out at its current tip, and register it in .gitmodules.',
+      'status': 'One line per submodule: its pinned commit, and a prefix — blank means checked out exactly as pinned, + means it has drifted, - means it isn\'t initialized.',
+      '--init': 'With update: also register (not just fetch) any submodule that\'s listed in .gitmodules but not yet set up locally — needed the first time, e.g. after a plain clone.',
+      '--recursive': 'With update or clone: also initialize any submodules that ui-kit itself has, not just the top-level ones.',
+      '--remote': 'With update: move the submodule to the latest tip of the branch .gitmodules says to follow, instead of the currently pinned commit.',
+      'deinit': 'Empty a submodule\'s working directory and remove its local config — but leave .gitmodules and the gitlink alone. Fully reversible with update --init.',
+      'foreach': 'Run one shell command inside every submodule in turn — e.g. git submodule foreach git status.'
+    }
+  },
+  tag: {
+    desc:'Creates, lists, or deletes tags — named pointers at a specific commit that, unlike branches, never move.',
+    flags:{
+      '-a': 'Create an annotated tag: a real object with its own tagger, date, and message, prompted for (or supplied via -m) — the recommended kind for anything you\'ll publish.',
+      '-m': 'Supply the annotated tag\'s message inline, instead of opening an editor.',
+      '-d': 'Delete a tag locally. Doesn\'t touch a copy already pushed to a remote — that needs a separate push --delete.',
+      '--tags': 'With push: send every local tag to the remote at once, instead of naming one.'
+    }
+  },
   switch: {
     desc:'Changes which branch is currently checked out, updating the working directory to match.',
-    flags:{ '-c': 'Create the named branch and switch to it, in one step — equivalent to git branch <name> followed by git switch <name>.' }
+    flags:{
+      '-c': 'Create the named branch and switch to it, in one step — equivalent to git branch <name> followed by git switch <name>.',
+      '--recurse-submodules': 'Also force every submodule to match the commit recorded for the branch you\'re switching to, immediately. Without it, a plain switch never touches submodule checkouts at all — use that instead if a submodule has work in progress.'
+    }
   },
-  tag: { desc:'Creates a named, permanent label on a specific commit — commonly used to mark release points (e.g. v1.0).', flags:{} },
-  clone: { desc:'Copies an entire remote repository — full history and all — down to a new local directory, and automatically sets it as "origin".', flags:{} },
+  clone: {
+    desc:'Copies an entire remote repository — full history and all — down to a new local directory, and automatically sets it as "origin".',
+    flags:{ '--recurse-submodules': 'Also clone and check out every submodule\'s content immediately, instead of leaving their folders empty until a separate submodule update --init.' }
+  },
   vim: { desc:'A terminal text editor. Here, it\'s opened automatically as Git\'s default $EDITOR whenever a command needs a multi-line message and none was given inline (e.g. plain git commit, or an interactive rebase todo list).', flags:{} },
   rm: { desc:'The shell\'s (not Git\'s) file-delete command — removes a file from disk. Distinct from git rm, which also stages the deletion.', flags:{} },
 };
@@ -3144,6 +3316,110 @@ S['branching'] = { frames: [
         {cmd:'git branch'},
       ],
       touched: ['catalog/listing.py'] } },
+]};
+
+/* ----------------------------------------------------------- tags-basic */
+S['tags-basic'] = { frames: [
+  { cap: "Three commits on <b>main</b> — the last one is what actually shipped as version 1.0.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2e004',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add checkout flow'},{id:'c3f001',parents:['b2e004'],lane:0,order:2,color:'blue',label:'polish for release'}],
+             branches:[{name:'main',commitId:'c3f001',color:'blue'}], head:{type:'branch',ref:'main'} },
+    term: [ {type:'cmd', text:'git log --oneline'}, {type:'out', text:'c3f001 (HEAD -> main) polish for release\nb2e004 add checkout flow\na1a001 init'} ] },
+  { cap: "<code>git tag v1.0.0</code> — a <b>lightweight</b> tag: just a name pointing at the current commit. No message, no author, no date — the simplest possible pin.",
+    local: { branches:[{name:'main',commitId:'c3f001',color:'blue'},{name:'v1.0.0',commitId:'c3f001',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git tag v1.0.0'} ] },
+  { cap: "A fix lands, then a real release: <code>git tag -a v1.1.0 -m \"…\"</code> creates an <b>annotated</b> tag instead — a full object in Git's database with its own message, tagger name, and date. The recommended kind for anything you'll actually publish.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2e004',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add checkout flow'},{id:'c3f001',parents:['b2e004'],lane:0,order:2,color:'blue',label:'polish for release'},{id:'d4a112',parents:['c3f001'],lane:0,order:3,color:'blue',label:'fix: checkout rounding'}],
+      branches:[{name:'main',commitId:'d4a112',color:'blue'},{name:'v1.0.0',commitId:'c3f001',color:'amber',stack:1},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git commit -m "fix: checkout rounding"'}, {type:'cmd', text:'git tag -a v1.1.0 -m "Rounding fix for checkout totals"'} ] },
+  { cap: "<code>git tag</code> lists every tag; <code>git show v1.1.0</code> proves the difference — the annotated one prints tagger, date and message before the commit it points to. The lightweight one shows only the commit.",
+    term: [ {type:'cmd', text:'git tag'}, {type:'out', text:'v1.0.0\nv1.1.0'},
+             {type:'cmd', text:'git show v1.1.0'}, {type:'out', text:'tag v1.1.0\nTagger: you <you@example.com>\nDate:   …\n\nRounding fix for checkout totals\n\ncommit d4a112…'} ] },
+  { cap: "One more commit — <code>main</code>'s pointer slides forward as always. <code>v1.0.0</code> and <code>v1.1.0</code> don't move an inch. That's the entire point of a tag: it's a branch that gave up moving.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'b2e004',parents:['a1a001'],lane:0,order:1,color:'blue',label:'add checkout flow'},{id:'c3f001',parents:['b2e004'],lane:0,order:2,color:'blue',label:'polish for release'},{id:'d4a112',parents:['c3f001'],lane:0,order:3,color:'blue',label:'fix: checkout rounding'},{id:'e5b223',parents:['d4a112'],lane:0,order:4,color:'blue',label:'wip: search tuning'}],
+      branches:[{name:'main',commitId:'e5b223',color:'blue'},{name:'v1.0.0',commitId:'c3f001',color:'amber',stack:1},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git commit -m "wip: search tuning"'} ] },
+  { cap: "<code>git checkout v1.0.0</code> jumps straight to that exact snapshot — but HEAD now points at a <b>commit</b>, not a branch: <b>detached HEAD</b>. Fine for looking around or rebuilding that exact release; risky if you forget and start committing here — those commits wouldn't belong to any branch.",
+    local: { head:{type:'commit',ref:'c3f001'} },
+    term: [ {type:'cmd', text:'git checkout v1.0.0'}, {type:'out', text:"Note: switching to 'v1.0.0'.\nYou are in 'detached HEAD' state…"} ] },
+  { cap: "Need to actually work from that old version? Don't stay detached — <code>git switch -c hotfix/v1.0.0-patch</code> creates a real branch right here, anchoring any new commits so they're never at risk of getting lost.",
+    local: { branches:[{name:'main',commitId:'e5b223',color:'blue'},{name:'v1.0.0',commitId:'c3f001',color:'amber',stack:1},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1},{name:'hotfix/v1.0.0-patch',commitId:'c3f001',color:'red',stack:2}], head:{type:'branch',ref:'hotfix/v1.0.0-patch'} },
+    term: [ {type:'cmd', text:'git switch -c hotfix/v1.0.0-patch'}, {type:'out', text:"Switched to a new branch 'hotfix/v1.0.0-patch'"} ] },
+  { cap: "🏋 Your turn — tag two releases and safely branch off an old one.",
+    exercise: { kind:'task', title: "Lightweight vs annotated tags, then a safe detour into detached HEAD",
+      html: `<p>In <code>mini-shop</code>, on <code>main</code>:</p>
+        <ul class="bullets">
+          <li><code>git tag v1.0.0</code> at the current commit — lightweight, no message.</li>
+          <li>Make one more commit, then <code>git tag -a v1.1.0 -m "…"</code> — annotated this time.</li>
+          <li>Run <code>git show v1.0.0</code> and <code>git show v1.1.0</code> and read the difference in the output.</li>
+          <li>Make a third commit, then confirm with <code>git log --oneline --decorate</code> that both tags stayed put while <code>main</code> moved on.</li>
+          <li><code>git checkout v1.0.0</code>, confirm the detached HEAD warning, then <code>git switch -c practice/from-v1.0.0</code> to anchor it safely.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: <code>git branch --show-current</code> after the last step prints <code>practice/from-v1.0.0</code>, not blank — blank would mean you're still detached.</div>` ,
+      shell: [
+        {cmd:'git tag v1.0.0'},
+        {cmd:'git commit -am "pricing: round to nearest cent"'},
+        {cmd:'git tag -a v1.1.0 -m "Rounding fix for pricing"'},
+        {cmd:'git show v1.0.0'},
+        {cmd:'git show v1.1.0'},
+        {cmd:'git commit -am "catalog: tweak sort order"'},
+        {cmd:'git log --oneline --decorate'},
+        {cmd:'git checkout v1.0.0'},
+        {cmd:'git switch -c practice/from-v1.0.0'},
+        {cmd:'git branch --show-current'},
+      ],
+      touched: ['pricing/pricing.py','catalog/listing.py'] } },
+]};
+
+/* ---------------------------------------------------------- tags-remote */
+S['tags-remote'] = { frames: [
+  { cap: "<code>v1.1.0</code> exists locally. <code>git push origin main</code> uploads the commits — but tags are <b>not</b> included by default. A common surprise.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4a112',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix: checkout rounding'}],
+             branches:[{name:'main',commitId:'d4a112',color:'blue'},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'}], branches:[{name:'main',commitId:'a1a001',color:'violet'}] },
+    term: [ {type:'cmd', text:'git push origin main'}, {type:'out', text:'To github.com:acme/app.git\n   a1a001..d4a112  main -> main'},
+             {type:'cmd', text:'git ls-remote --tags origin'}, {type:'out', text:'# (empty) — the tag never went anywhere'} ] },
+  { cap: "<code>git push origin v1.1.0</code> pushes one specific tag. <code>git push --tags</code> pushes every local tag at once — reach for a specific push when you only mean to publish one.",
+    remote: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'d4a112',parents:['a1a001'],lane:0,order:1,color:'violet',label:'fix: checkout rounding'}],
+              branches:[{name:'main',commitId:'d4a112',color:'violet'},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git push origin v1.1.0'}, {type:'out', text:'To github.com:acme/app.git\n * [new tag]         v1.1.0 -> v1.1.0'} ] },
+  { cap: "The tag turns out to point at the wrong commit. Deleting it is a <b>two-place</b> operation: <code>git tag -d</code> removes it locally...",
+    local: { branches:[{name:'main',commitId:'d4a112',color:'blue'}] },
+    term: [ {type:'cmd', text:'git tag -d v1.1.0'}, {type:'out', text:'Deleted tag \'v1.1.0\' (was …)'} ] },
+  { cap: "...and <code>git push origin --delete v1.1.0</code> removes it from the remote too. Skipping this step leaves a wrong tag live on GitHub even though it's gone from your machine.",
+    remote: { branches:[{name:'main',commitId:'d4a112',color:'violet'}] },
+    term: [ {type:'cmd', text:'git push origin --delete v1.1.0'}, {type:'out', text:'To github.com:acme/app.git\n - [deleted]         v1.1.0'} ] },
+  { cap: "Retag the right commit and republish — same two commands as the very first time.",
+    local: { branches:[{name:'main',commitId:'d4a112',color:'blue'},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    remote: { branches:[{name:'main',commitId:'d4a112',color:'violet'},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git tag -a v1.1.0 -m "Rounding fix for checkout totals"'}, {type:'cmd', text:'git push origin v1.1.0'} ] },
+  { cap: "<code>git describe --tags</code> answers \"what version am I on?\" in one line — nearest tag, how many commits since, and a short hash. Exactly what a build script wants for a version string.",
+    local: { commits:[{id:'a1a001',parents:[],lane:0,order:0,color:'blue',label:'init'},{id:'d4a112',parents:['a1a001'],lane:0,order:1,color:'blue',label:'fix: checkout rounding'},{id:'f6c334',parents:['d4a112'],lane:0,order:2,color:'blue',label:'wip: search tuning'}],
+             branches:[{name:'main',commitId:'f6c334',color:'blue'},{name:'v1.1.0',commitId:'d4a112',color:'amber',stack:1}] },
+    term: [ {type:'cmd', text:'git commit -m "wip: search tuning"'}, {type:'cmd', text:'git describe --tags'}, {type:'out', text:'v1.1.0-1-gf6c334'} ] },
+  { cap: "Convention, not enforcement: <code>MAJOR.MINOR.PATCH</code> (semantic versioning) is just a naming habit Git knows nothing about. But it's the habit CI/CD pipelines lean on — many teams wire a workflow to trigger a GitHub Release the moment a tag matching <code>v*.*.*</code> is pushed.",
+    term: [ {type:'out', text:"# .github/workflows/release.yml (conceptual)"}, {type:'out', text:"on:\n  push:\n    tags: ['v*.*.*']\n# → build, attach artifacts, publish a GitHub Release automatically"} ] },
+  { cap: "🏋 Your turn — publish, retract, and re-publish a tag.",
+    exercise: { kind:'task', title: "Push a tag, delete it in both places, then republish",
+      html: `<p>Using the tags from the previous exercise:</p>
+        <ul class="bullets">
+          <li><code>git push origin main</code>, then <code>git ls-remote --tags origin</code> — confirm your tags did <b>not</b> come along.</li>
+          <li><code>git push origin v1.1.0</code> to publish just that one.</li>
+          <li>Pretend it's wrong: <code>git tag -d v1.1.0</code> locally, <b>then</b> <code>git push origin --delete v1.1.0</code> — both steps, in that order.</li>
+          <li>Retag the same commit correctly and push it again.</li>
+          <li>Make one more commit and run <code>git describe --tags</code>.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: <code>git ls-remote --tags origin</code> shows the tag exactly once — if you skipped the remote delete, you'd see it fail to overwrite or need <code>--force</code>, a good sign something was missed.</div>` ,
+      shell: [
+        {cmd:'git push origin main'},
+        {cmd:'git ls-remote --tags origin'},
+        {cmd:'git push origin v1.1.0'},
+        {cmd:'git tag -d v1.1.0'},
+        {cmd:'git push origin --delete v1.1.0'},
+        {cmd:'git tag -a v1.1.0 -m "Rounding fix for pricing"'},
+        {cmd:'git push origin v1.1.0'},
+        {cmd:'git commit -am "catalog: tweak sort order"'},
+        {cmd:'git describe --tags'},
+      ] } },
 ]};
 
 /* --------------------------------------------------------------- stash */
@@ -4256,6 +4532,207 @@ S['git-hooks-pytest'] = { frames: [
         {cmd:'git commit -am "pricing: fix discount rounding again"'},
       ],
       touched: ['pricing/pricing.py','tests/test_pricing.py'] } },
+]};
+
+/* ------------------------------------------------------------- submodule-add */
+S['submodule-add'] = { frames: [
+  { cap: "mini-shop (the superproject) and ui-kit (a separate, already-existing repo) have completely unrelated histories — right now, nothing connects them.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'}], branches:[{name:'main',commitId:'m1a001',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'u1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'u2b002',parents:['u1a001'],lane:0,order:1,color:'violet',label:'add Button component'}],
+              branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [] },
+  { cap: "<code>git submodule add &lt;url&gt; vendor/ui-kit</code> clones ui-kit into that path, checked out at its current tip, and creates <code>.gitmodules</code> to remember where it came from.",
+    term: [ {type:'cmd', text:'git submodule add https://github.com/acme/ui-kit vendor/ui-kit'},
+             {type:'out', text:"Cloning into 'vendor/ui-kit'...\nremote: Enumerating objects…\nResolving deltas: 100% (3/3), done."} ] },
+  { cap: "<code>git status</code> shows two new things staged: <code>.gitmodules</code> — a real, ordinary text file — and <code>vendor/ui-kit</code>, but as <b>one</b> entry, not a folder full of files.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:'On branch main\nChanges to be committed:\n  <span class="o-green">new file:</span>   .gitmodules\n  <span class="o-green">new file:</span>   vendor/ui-kit'} ] },
+  { cap: "One commit in the superproject records the pin. Nothing about ui-kit's own history changes — it isn't even aware it's been added anywhere.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}] },
+    term: [ {type:'cmd', text:'git commit -m "vendor: add ui-kit submodule"'}, {type:'out', text:'[main m2b002] vendor: add ui-kit submodule\n 2 files changed, 4 insertions(+)'} ] },
+  { cap: "<code>cat .gitmodules</code> shows the path/URL mapping. <code>git ls-tree</code> reveals the gitlink itself — mode <code>160000</code>, and the hash is literally ui-kit's own commit, <code>u2b002</code>, matching the graph on the right.",
+    term: [ {type:'cmd', text:'cat .gitmodules'}, {type:'out', text:'[submodule "vendor/ui-kit"]\n\tpath = vendor/ui-kit\n\turl = https://github.com/acme/ui-kit.git'},
+             {type:'cmd', text:'git ls-tree HEAD vendor/ui-kit'}, {type:'out', text:'160000 commit u2b002…\tvendor/ui-kit'} ] },
+  { cap: "🏋 Your turn — add a real submodule to mini-shop.",
+    exercise: { kind:'task', title: "git submodule add, and read what actually got staged",
+      html: `<p>Pick any small repo you control (even an empty scratch repo works) to stand in for <code>ui-kit</code>. In <code>mini-shop</code>, on <code>main</code>:</p>
+        <ul class="bullets">
+          <li><code>git submodule add &lt;its url&gt; vendor/ui-kit</code>.</li>
+          <li><code>git status</code> — confirm <code>.gitmodules</code> and <code>vendor/ui-kit</code> are both staged, as a single gitlink entry.</li>
+          <li>Commit: <code>git commit -m "vendor: add ui-kit submodule"</code>.</li>
+          <li><code>git ls-tree HEAD vendor/ui-kit</code> — confirm mode <code>160000</code>, and that the hash matches <code>vendor/ui-kit</code>'s own <code>git rev-parse HEAD</code>.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: <code>cat .gitmodules</code> shows your submodule's path and URL, and the superproject's log shows exactly one new commit for the whole operation.</div>` ,
+      shell: [
+        {cmd:'git submodule add <url> vendor/ui-kit'},
+        {cmd:'git status'},
+        {cmd:'git commit -m "vendor: add ui-kit submodule"'},
+        {cmd:'git ls-tree HEAD vendor/ui-kit'},
+        {cmd:'cd vendor/ui-kit && git rev-parse HEAD'},
+      ] } },
+]};
+
+/* ----------------------------------------------------------- submodule-clone */
+S['submodule-clone'] = { frames: [
+  { cap: "mini-shop already has ui-kit pinned at <code>u2b002</code>. A teammate clones mini-shop for the very first time.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'u1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'u2b002',parents:['u1a001'],lane:0,order:1,color:'violet',label:'add Button component'}],
+              branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git clone https://github.com/acme/mini-shop'}, {type:'out', text:"Cloning into 'mini-shop'...\ndone."} ] },
+  { cap: "<code>ls vendor/ui-kit</code> — empty. A plain clone fetches the gitlink pointer, never the submodule's actual content. <code>git submodule status</code>'s leading <code>-</code> confirms it: not initialized.",
+    term: [ {type:'cmd', text:'ls vendor/ui-kit'}, {type:'out', text:'<span class="c-com"># (nothing)</span>'},
+             {type:'cmd', text:'git submodule status'}, {type:'out', text:'-u2b002… vendor/ui-kit'} ] },
+  { cap: "Fix, after the fact: <code>git submodule update --init --recursive</code> — the <code>--recursive</code> matters if ui-kit itself has submodules of its own.",
+    term: [ {type:'cmd', text:'git submodule update --init --recursive'},
+             {type:'out', text:"Submodule 'vendor/ui-kit' (https://github.com/acme/ui-kit.git) registered for path 'vendor/ui-kit'\nCloning into 'vendor/ui-kit'...\nSubmodule path 'vendor/ui-kit': checked out 'u2b002…'"} ] },
+  { cap: "Better habit: skip the two-step dance entirely by cloning with <code>--recurse-submodules</code> from the start — superproject and every submodule, populated in one command.",
+    term: [ {type:'cmd', text:'git clone --recurse-submodules https://github.com/acme/mini-shop'} ] },
+  { cap: "Step inside either way: <code>cd vendor/ui-kit &amp;&amp; git status</code> — <b>detached HEAD</b>, checked out at exactly the pinned commit. Same state as checking out a tag, same reason: it's a specific commit, not a branch.",
+    term: [ {type:'cmd', text:'cd vendor/ui-kit'}, {type:'cmd', text:'git status'}, {type:'out', text:"HEAD detached at u2b002\nnothing to commit, working tree clean"} ] },
+  { cap: "Back in mini-shop, <code>git submodule status</code> now shows a plain space — checked out exactly at the pinned commit. A leading <code>+</code> would mean it's drifted (new commits or uncommitted edits inside it); <code>-</code> means still uninitialized.",
+    term: [ {type:'cmd', text:'cd ../..'}, {type:'cmd', text:'git submodule status'}, {type:'out', text:' u2b002… vendor/ui-kit (heads/main)'} ] },
+  { cap: "🏋 Your turn — clone into an empty submodule, then populate it two ways.",
+    exercise: { kind:'task', title: "Plain clone vs --recurse-submodules, and reading submodule status",
+      html: `<p>Using the mini-shop repo from the previous exercise:</p>
+        <ul class="bullets">
+          <li>In a fresh directory, do a <b>plain</b> <code>git clone</code> of it. Confirm <code>vendor/ui-kit</code> is empty and <code>git submodule status</code> shows a leading <code>-</code>.</li>
+          <li>Run <code>git submodule update --init --recursive</code> there and confirm the folder populates.</li>
+          <li><code>cd vendor/ui-kit</code>, run <code>git status</code>, and confirm the detached HEAD message.</li>
+          <li>In a second fresh directory, clone again with <code>--recurse-submodules</code> and confirm it's populated immediately, no second command needed.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: you can explain, from the leading character alone, what a <code>git submodule status</code> line beginning with <code>-</code> versus a space means.</div>` ,
+      shell: [
+        {cmd:'git clone https://github.com/acme/mini-shop clone-a'},
+        {cmd:'cd clone-a && ls vendor/ui-kit'},
+        {cmd:'git submodule status'},
+        {cmd:'git submodule update --init --recursive'},
+        {cmd:'cd vendor/ui-kit && git status'},
+        {cmd:'cd ../../..'},
+        {cmd:'git clone --recurse-submodules https://github.com/acme/mini-shop clone-b'},
+        {cmd:'ls clone-b/vendor/ui-kit'},
+      ] } },
+]};
+
+/* ---------------------------------------------------------- submodule-deinit */
+S['submodule-deinit'] = { frames: [
+  { cap: "ui-kit is checked out normally — pinned at <code>u2b002</code>, files present, nothing unusual.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'u1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'u2b002',parents:['u1a001'],lane:0,order:1,color:'violet',label:'add Button component'}], branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [ {type:'cmd', text:'git submodule status'}, {type:'out', text:' u2b002… vendor/ui-kit (heads/main)'} ] },
+  { cap: "You don't need it checked out right now — maybe it's large, or you're only touching mini-shop's own code today. <code>git submodule deinit vendor/ui-kit</code> empties the working directory and removes its <b>local, runtime</b> config section.",
+    term: [ {type:'cmd', text:'git submodule deinit vendor/ui-kit'}, {type:'out', text:"Cleared directory 'vendor/ui-kit'\nSubmodule 'vendor/ui-kit' (…/ui-kit.git) unregistered for path 'vendor/ui-kit'"} ] },
+  { cap: "Nothing about the project itself changed: <code>.gitmodules</code> still lists ui-kit, and the gitlink is still sitting in the superproject's committed tree, unchanged. <code>git status</code> is clean — deinit is a purely local, workspace-only action, not a history change.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:'On branch main\nnothing to commit, working tree clean'},
+             {type:'cmd', text:'cat .gitmodules'}, {type:'out', text:'[submodule "vendor/ui-kit"]\n\tpath = vendor/ui-kit\n\turl = https://github.com/acme/ui-kit.git\n<span class="c-com"># still here — deinit never touches this file</span>'} ] },
+  { cap: "<code>git submodule status</code> shows the same leading <code>-</code> as an uncloned submodule — from the outside, deinitialized looks identical to never-initialized. The difference is invisible until you check.",
+    term: [ {type:'cmd', text:'git submodule status'}, {type:'out', text:'-u2b002… vendor/ui-kit'} ] },
+  { cap: "Bringing it back is the same one-liner as after a plain clone: <code>git submodule update --init vendor/ui-kit</code> re-checks it out at exactly the pinned commit — nothing was ever unlinked, only powered down.",
+    term: [ {type:'cmd', text:'git submodule update --init vendor/ui-kit'}, {type:'out', text:"Submodule path 'vendor/ui-kit': checked out 'u2b002…'"},
+             {type:'cmd', text:'git submodule status'}, {type:'out', text:' u2b002… vendor/ui-kit (heads/main)'} ] },
+  { cap: "🏋 Your turn — power a submodule down, then bring it back.",
+    exercise: { kind:'task', title: "deinit, verify nothing was unlinked, then restore it",
+      html: `<p>Using mini-shop with ui-kit already added:</p>
+        <ul class="bullets">
+          <li><code>git submodule deinit vendor/ui-kit</code> — confirm the folder is now empty.</li>
+          <li><code>git status</code> — confirm it's clean (nothing staged, nothing to commit).</li>
+          <li><code>cat .gitmodules</code> — confirm ui-kit's entry is still there, untouched.</li>
+          <li><code>git submodule update --init vendor/ui-kit</code> — confirm it's back, pinned at the exact same commit as before.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: at no point during this exercise did <code>git log</code> gain a new commit — deinit and re-init are both purely local, workspace-only operations.</div>` ,
+      shell: [
+        {cmd:'git submodule deinit vendor/ui-kit'},
+        {cmd:'ls vendor/ui-kit'},
+        {cmd:'git status'},
+        {cmd:'cat .gitmodules'},
+        {cmd:'git submodule update --init vendor/ui-kit'},
+        {cmd:'git submodule status'},
+      ] } },
+]};
+
+/* ---------------------------------------------------------- submodule-remove */
+S['submodule-remove'] = { frames: [
+  { cap: "ui-kit is present and pinned, same as always.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'u1a001',parents:[],lane:0,order:0,color:'violet',label:'init'},{id:'u2b002',parents:['u1a001'],lane:0,order:1,color:'violet',label:'add Button component'}], branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [] },
+  { cap: "This time the decision is final — mini-shop doesn't need ui-kit at all anymore. Step 1: <code>git submodule deinit -f vendor/ui-kit</code> — same as before, empties it locally. <code>-f</code> forces past any local modifications inside it.",
+    term: [ {type:'cmd', text:'git submodule deinit -f vendor/ui-kit'}, {type:'out', text:"Cleared directory 'vendor/ui-kit'\nSubmodule 'vendor/ui-kit' unregistered for path 'vendor/ui-kit'"} ] },
+  { cap: "Step 2: <code>git rm vendor/ui-kit</code> removes the gitlink from the index and deletes the (already-empty) path. This is a real, stageable change — unlike deinit.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}] },
+    term: [ {type:'cmd', text:'git rm vendor/ui-kit'}, {type:'out', text:'rm \'vendor/ui-kit\''} ] },
+  { cap: "Step 3: <code>git rm</code> does <b>not</b> touch <code>.gitmodules</code> for you — delete its <code>[submodule \"vendor/ui-kit\"]</code> block by hand and stage the file, or a future re-add of anything at that path will warn about a stale entry.",
+    term: [ {type:'cmd', text:'vim .gitmodules'}, {type:'out', text:'<span class="c-com"># delete the [submodule "vendor/ui-kit"] block, save</span>'}, {type:'cmd', text:'git add .gitmodules'} ] },
+  { cap: "Step 4 — easy to forget: Git also keeps the submodule's own <code>.git</code> data cached under <code>.git/modules/</code> even after all this. <code>rm -rf .git/modules/vendor/ui-kit</code> clears it, so a future <code>submodule add</code> at the same path won't collide with leftovers.",
+    term: [ {type:'cmd', text:'rm -rf .git/modules/vendor/ui-kit'} ] },
+  { cap: "Commit the removal — one ordinary commit, same as adding it was.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: add ui-kit submodule'},{id:'m3c003',parents:['m2b002'],lane:0,order:2,color:'blue',label:'vendor: remove ui-kit submodule'}], branches:[{name:'main',commitId:'m3c003',color:'blue'}] },
+    term: [ {type:'cmd', text:'git commit -m "vendor: remove ui-kit submodule"'}, {type:'out', text:'[main m3c003] vendor: remove ui-kit submodule\n 2 files changed, 4 deletions(-)'} ] },
+  { cap: "<code>git submodule status</code> now shows nothing — and ui-kit's <b>own</b> repository, over on the right, is completely untouched. Removing a submodule only ever deletes the superproject's reference to it.",
+    term: [ {type:'cmd', text:'git submodule status'}, {type:'out', text:'<span class="c-com"># (nothing)</span>'} ] },
+  { cap: "🏋 Your turn — the full four-step teardown.",
+    exercise: { kind:'task', title: "deinit, git rm, edit .gitmodules, purge .git/modules, commit",
+      html: `<p>Using mini-shop with ui-kit already added:</p>
+        <ul class="bullets">
+          <li><code>git submodule deinit -f vendor/ui-kit</code>.</li>
+          <li><code>git rm vendor/ui-kit</code>.</li>
+          <li>Edit <code>.gitmodules</code> by hand, delete ui-kit's block, <code>git add .gitmodules</code>.</li>
+          <li><code>rm -rf .git/modules/vendor/ui-kit</code>.</li>
+          <li>Commit the removal as one commit.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: <code>git submodule status</code> shows nothing, <code>vendor/</code> is gone entirely, and <code>git log --oneline</code> shows exactly one new "remove" commit — not four.</div>` ,
+      shell: [
+        {cmd:'git submodule deinit -f vendor/ui-kit'},
+        {cmd:'git rm vendor/ui-kit'},
+        {comment:'edit .gitmodules — delete the ui-kit block'},
+        {cmd:'git add .gitmodules'},
+        {cmd:'rm -rf .git/modules/vendor/ui-kit'},
+        {cmd:'git commit -m "vendor: remove ui-kit submodule"'},
+        {cmd:'git submodule status'},
+      ] } },
+]};
+
+/* ------------------------------------------------------ submodule-branch-switch */
+S['submodule-branch-switch'] = { frames: [
+  { cap: "On <code>main</code>, ui-kit is pinned at <code>u1</code> — and you're mid-edit <b>inside</b> ui-kit itself, uncommitted, tweaking a shared component.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: pin ui-kit @ u1'}], branches:[{name:'main',commitId:'m2b002',color:'blue'}], head:{type:'branch',ref:'main'} },
+    remote: { commits:[{id:'u1a001',parents:[],lane:0,order:0,color:'violet',label:'u1 — init'},{id:'u2b002',parents:['u1a001'],lane:0,order:1,color:'violet',label:'u2 — add variant prop'}], branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [ {type:'out', text:"# vendor/ui-kit: uncommitted edits to Button.jsx — not staged, not committed, not even in ui-kit's own history yet"} ] },
+  { cap: "<code>release/v2</code> exists too — and its superproject commit pins ui-kit at <code>u2</code>, one commit further along than what's currently checked out.",
+    local: { commits:[{id:'m1a001',parents:[],lane:0,order:0,color:'blue',label:'init: mini-shop scaffold'},{id:'m2b002',parents:['m1a001'],lane:0,order:1,color:'blue',label:'vendor: pin ui-kit @ u1'},{id:'m3c003',parents:['m1a001'],lane:1,order:1,color:'green',label:'vendor: pin ui-kit @ u2'}], branches:[{name:'main',commitId:'m2b002',color:'blue'},{name:'release/v2',commitId:'m3c003',color:'green',stack:1}] },
+    term: [ {type:'cmd', text:'git branch -v'}, {type:'out', text:'  main         m2b002 vendor: pin ui-kit @ u1\n  release/v2   m3c003 vendor: pin ui-kit @ u2'} ] },
+  { cap: "<code>git switch release/v2</code> in the <b>superproject</b> — plain, no flags. It updates which commit the gitlink points to in mini-shop's tree, and that's <b>all</b>. Your uncommitted ui-kit edits are completely undisturbed.",
+    local: { head:{type:'branch',ref:'release/v2'} },
+    term: [ {type:'cmd', text:'git switch release/v2'}, {type:'out', text:"Switched to branch 'release/v2'"} ] },
+  { cap: "<code>git status</code> in the superproject now flags <code>vendor/ui-kit</code> as modified — because what's checked out (still <code>u1</code>, plus your edits) doesn't match what <code>release/v2</code>'s tree expects (<code>u2</code>). Expected, and completely safe: nothing was touched.",
+    term: [ {type:'cmd', text:'git status'}, {type:'out', text:'On branch release/v2\nChanges not staged for commit:\n  <span class="o-amber">modified:</span>   vendor/ui-kit (modified content)'} ] },
+  { cap: "When you're actually ready to sync — after committing or stashing your ui-kit work — <code>git submodule update</code> moves the checkout to match the branch you're now on. Only <i>then</i> does anything about ui-kit's working directory change.",
+    remote: { branches:[{name:'main',commitId:'u2b002',color:'violet'}] },
+    term: [ {type:'out', text:'# once your ui-kit edits are safely committed or stashed elsewhere…'}, {type:'cmd', text:'git submodule update'}, {type:'out', text:"Submodule path 'vendor/ui-kit': checked out 'u2b002…'"} ] },
+  { cap: "The trap: <code>git switch release/v2 --recurse-submodules</code> looks like the same command with one extra flag — but it force-syncs every submodule to match the new branch <b>immediately</b>, as part of the switch itself. Run that instead of the plain switch, and your in-progress ui-kit edits get silently blown away or detached.",
+    term: [ {type:'out', text:"<span class=\"o-red\"># DON'T, if ui-kit has work in progress:</span>"}, {type:'cmd', text:'git switch release/v2 --recurse-submodules'}, {type:'out', text:"<span class=\"o-red\"># uncommitted vendor/ui-kit changes would be overwritten right here</span>"} ] },
+  { cap: "🏋 Your turn — switch branches with a submodule mid-edit, safely.",
+    exercise: { kind:'task', title: "Prove a plain switch leaves a modified submodule alone",
+      html: `<p>Using mini-shop with ui-kit added, on <code>main</code>:</p>
+        <ul class="bullets">
+          <li>Create <code>release/v2</code>, and inside <code>vendor/ui-kit</code> make (and leave uncommitted) a trivial edit.</li>
+          <li>On <code>main</code>, edit <code>config/settings.py</code>, commit, and re-pin ui-kit to a different commit than release/v2 expects (any second commit works).</li>
+          <li><code>git switch release/v2</code> — plain, no flags. Confirm with <code>ls vendor/ui-kit</code> that your uncommitted edit is still sitting there untouched.</li>
+          <li><code>git status</code> — read the "modified content" line for <code>vendor/ui-kit</code> and explain out loud why it's there.</li>
+          <li>Only now, commit your ui-kit edit (inside ui-kit's own repo), then run <code>git submodule update</code> in the superproject and confirm it re-syncs cleanly.</li>
+        </ul>
+        <div class="exercise-check">✓ Check: you never lost the ui-kit edit, and you can explain why <code>--recurse-submodules</code> on the switch would have put it at risk.</div>` ,
+      shell: [
+        {cmd:'git switch -c release/v2'},
+        {cmd:'git switch main'},
+        {comment:'edit vendor/ui-kit/Button.jsx, leave it uncommitted'},
+        {cmd:'git commit -am "config: add FEATURE_V2 flag"'},
+        {cmd:'git switch release/v2'},
+        {cmd:'ls vendor/ui-kit'},
+        {cmd:'git status'},
+        {comment:'commit the ui-kit edit inside vendor/ui-kit itself'},
+        {cmd:'cd vendor/ui-kit && git commit -am "button: adjust variant prop"'},
+        {cmd:'cd ../.. && git submodule update'},
+      ],
+      touched: ['config/settings.py'] } },
 ]};
 
 </script>
